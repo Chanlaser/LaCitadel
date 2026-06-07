@@ -1,0 +1,2334 @@
+<!DOCTYPE html>
+<!--
+  LaCitadel — Deadlock Stats
+  Hecho en Puerto Rico 🇵🇷 · por Chanlaser
+  Desarrollado con la ayuda de Claude (Anthropic)
+-->
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LaCitadel — Deadlock Stats</title>
+<style>
+:root{
+  --bg:#0b0b0e;--surface:#16161b;--surface2:#1e1e25;--surface3:#26262f;
+  --border:rgba(255,255,255,0.07);--border2:rgba(255,255,255,0.13);
+  --text:#ededf0;--muted:#7a7a88;--hint:#3e3e4a;
+  --accent:#fa4454;--green:#34d399;--amber:#fbbf24;--blue:#60a5fa;--red:#f87171;
+  --a1:#f472b6;--a2:#38bdf8;--a3:#a78bfa;--aR:#fbbf24;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+html,body{height:100%;overflow:hidden;}
+body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;font-size:14px;display:flex;flex-direction:column;}
+
+header{padding:10px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;flex-shrink:0;background:var(--surface);}
+.logo{width:28px;height:28px;background:var(--accent);border-radius:6px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;color:#fff;flex-shrink:0;}
+.htxt h1{font-size:14px;font-weight:600;}
+.htxt p{font-size:10px;color:var(--muted);}
+.hright{margin-left:auto;display:flex;align-items:center;gap:7px;}
+.hbtn{background:var(--surface2);border:1px solid var(--border);color:var(--muted);border-radius:5px;padding:4px 10px;font-size:11px;cursor:pointer;}
+.hbtn:hover{border-color:var(--border2);color:var(--text);}
+.hbtn.on{border-color:var(--amber);color:var(--amber);background:rgba(251,191,36,.08);}
+.upd-btn{background:rgba(52,211,153,.1);border:1px solid rgba(52,211,153,.3);color:var(--green);border-radius:5px;padding:4px 13px;font-size:11px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:5px;}
+.upd-btn:hover{background:rgba(52,211,153,.18);}
+.upd-btn.loading{opacity:.55;cursor:not-allowed;pointer-events:none;}
+.spin{display:inline-block;animation:spin .7s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+.pbadge{background:var(--surface2);border:1px solid var(--border);padding:3px 10px;border-radius:20px;font-size:10px;color:var(--muted);}
+
+.layout{display:flex;flex:1;overflow:hidden;}
+
+.sidebar{width:215px;border-right:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0;background:var(--surface);}
+.sb-top{padding:8px;}
+.sb-search{position:relative;}
+.sb-search input{width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:5px;padding:5px 7px 5px 24px;font-size:11px;outline:none;}
+.sb-search input:focus{border-color:var(--accent);}
+.sb-search::before{content:'⌕';position:absolute;left:6px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:13px;pointer-events:none;}
+.sb-list{flex:1;overflow-y:auto;padding:4px;}
+.hi{display:flex;align-items:center;gap:7px;padding:5px 6px;border-radius:6px;cursor:pointer;border:1px solid transparent;transition:background .1s;}
+.hi:hover{background:var(--surface2);}
+.hi.active{background:rgba(250,68,84,.09);border-color:rgba(250,68,84,.18);}
+.hi-img{width:32px;height:32px;border-radius:50%;overflow:hidden;flex-shrink:0;border:1.5px solid var(--border);}
+.hi-img img{width:100%;height:100%;object-fit:cover;object-position:top;}
+.hi-body{flex:1;min-width:0;}
+.hi-name{font-size:11px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--muted);}
+.hi.active .hi-name{color:var(--text);}
+.hi-meta{font-size:10px;color:var(--hint);display:flex;gap:4px;align-items:center;margin-top:1px;}
+.pip{width:5px;height:5px;border-radius:50%;flex-shrink:0;}
+.pip-full{background:var(--green);}.pip-basic{background:var(--blue);}.pip-new{background:var(--amber);}.pip-empty{background:var(--hint);}
+.sb-footer{padding:7px 10px;border-top:1px solid var(--border);}
+.sb-lastup{font-size:10px;color:var(--hint);text-align:center;margin-bottom:5px;}
+.sb-legend{display:flex;flex-direction:column;gap:3px;}
+.sl-row{display:flex;align-items:center;gap:5px;font-size:10px;color:var(--hint);}
+
+::-webkit-scrollbar{width:3px;}::-webkit-scrollbar-track{background:transparent;}::-webkit-scrollbar-thumb{background:var(--surface3);border-radius:2px;}
+
+.main{flex:1;overflow-y:auto;}
+.content{padding:18px 22px;max-width:900px;}
+
+.home-hdr{margin-bottom:16px;}
+.home-hdr h2{font-size:18px;font-weight:700;margin-bottom:3px;}
+.home-hdr p{font-size:12px;color:var(--muted);}
+.tier-group{margin-bottom:16px;}
+.tier-lbl{font-size:10px;text-transform:uppercase;letter-spacing:.08em;font-weight:700;margin-bottom:7px;display:flex;align-items:center;gap:8px;}
+.tl-S{color:#fbbf24;}.tl-A{color:#34d399;}.tl-B{color:#60a5fa;}.tl-C{color:#f87171;}.tl-D{color:#7a7a88;}
+.tier-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:7px;}
+.hcard{background:var(--surface);border:1px solid var(--border);border-radius:8px;overflow:hidden;cursor:pointer;transition:all .15s;position:relative;}
+.hcard:hover{border-color:var(--border2);transform:translateY(-1px);}
+.hcard-img{width:100%;height:80px;overflow:hidden;background:var(--surface2);}
+.hcard-img img{width:100%;height:100%;object-fit:cover;object-position:top;}
+.hcard-body{padding:5px 7px 6px;}
+.hcard-name{font-size:10px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.hcard-stats{display:flex;justify-content:space-between;align-items:center;margin-top:2px;}
+.hcard-wr{font-size:11px;font-weight:700;}
+.hcard-pr{font-size:10px;color:var(--muted);}
+.hcard-pip{position:absolute;top:5px;right:5px;width:7px;height:7px;border-radius:50%;}
+.hcard-tag{position:absolute;top:5px;left:5px;border-radius:3px;padding:1px 4px;font-size:8px;font-weight:700;}
+.tag-new{background:rgba(251,191,36,.9);color:#000;}
+.tag-stale{background:rgba(250,68,84,.7);color:#fff;}
+.tag-full{background:rgba(52,211,153,.8);color:#000;}
+
+.hero-hdr{display:flex;gap:16px;margin-bottom:14px;align-items:flex-end;}
+.hh-port{width:88px;height:106px;border-radius:9px;overflow:hidden;flex-shrink:0;border:1px solid var(--border);}
+.hh-port img{width:100%;height:100%;object-fit:cover;object-position:top;}
+.hh-info{flex:1;}
+.hh-info h2{font-size:20px;font-weight:800;margin-bottom:4px;letter-spacing:-.02em;}
+.hh-badges{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:8px;}
+.tbadge{padding:2px 8px;border-radius:4px;font-size:10px;font-weight:700;}
+.tb-S{background:rgba(251,191,36,.15);color:var(--amber);}.tb-A{background:rgba(52,211,153,.13);color:var(--green);}
+.tb-B{background:rgba(96,165,250,.13);color:var(--blue);}.tb-C{background:rgba(248,113,113,.13);color:var(--red);}
+.tb-D{background:var(--surface2);color:var(--muted);}
+.sbadge{padding:2px 7px;border-radius:4px;font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;}
+.sb-full{background:rgba(52,211,153,.12);color:var(--green);}
+.sb-basic{background:rgba(96,165,250,.1);color:var(--blue);}
+.sb-new{background:rgba(251,191,36,.1);color:var(--amber);}
+.sb-empty{background:var(--surface2);color:var(--muted);}
+.live-tag{background:rgba(52,211,153,.1);border:1px solid rgba(52,211,153,.2);color:var(--green);padding:2px 7px;border-radius:4px;font-size:9px;font-weight:600;}
+.stale-tag{background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.2);color:var(--amber);padding:2px 7px;border-radius:4px;font-size:9px;}
+.hh-stats{display:flex;gap:9px;flex-wrap:wrap;}
+.stat-box{background:var(--surface2);border-radius:6px;padding:6px 11px;text-align:center;}
+.stat-val{font-size:16px;font-weight:700;line-height:1;}
+.stat-lbl{font-size:9px;color:var(--muted);margin-top:2px;text-transform:uppercase;letter-spacing:.04em;}
+
+.tabs{display:flex;gap:1px;border-bottom:1px solid var(--border);margin-bottom:13px;align-items:center;}
+.tab{padding:7px 14px;font-size:12px;cursor:pointer;border-bottom:2px solid transparent;color:var(--muted);user-select:none;}
+.tab:hover{color:var(--text);}
+.tab.active{color:var(--text);border-bottom-color:var(--accent);}
+.tab-right{margin-left:auto;padding-right:4px;}
+
+.banner{border-radius:7px;padding:9px 12px;font-size:11px;line-height:1.6;margin-bottom:11px;display:flex;gap:8px;}
+.bi{font-size:14px;flex-shrink:0;margin-top:1px;}
+.bt strong{display:block;margin-bottom:1px;}
+.banner a{color:var(--blue);text-decoration:none;}
+.bwarn{background:rgba(251,191,36,.07);border:1px solid rgba(251,191,36,.2);color:#c9a020;}
+.binfo{background:rgba(96,165,250,.07);border:1px solid rgba(96,165,248,.18);color:#5590c0;}
+.bsuccess{background:rgba(52,211,153,.07);border:1px solid rgba(52,211,153,.18);color:#28a87a;}
+
+.nodata{text-align:center;padding:36px 28px;}
+.nd-icon{font-size:40px;margin-bottom:12px;opacity:.35;}
+.nodata h3{font-size:15px;font-weight:600;margin-bottom:5px;color:var(--muted);}
+.nodata p{font-size:12px;color:var(--hint);line-height:1.7;max-width:400px;margin:0 auto 14px;}
+.nd-box{background:var(--surface);border:1px solid var(--border);border-radius:7px;padding:11px 15px;text-align:left;max-width:340px;margin:0 auto 13px;}
+.nd-box h4{font-size:9px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:7px;}
+.nd-row{display:flex;gap:7px;padding:3px 0;border-bottom:1px solid var(--border);font-size:11px;color:var(--muted);}
+.nd-row:last-child{border-bottom:none;}
+.extlinks{display:flex;gap:7px;justify-content:center;flex-wrap:wrap;}
+.extlink{background:var(--surface);border:1px solid var(--border2);color:var(--blue);border-radius:5px;padding:5px 12px;font-size:11px;text-decoration:none;}
+
+.wp{display:none;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:11px 13px;margin-bottom:11px;}
+.wp-hdr{font-size:12px;font-weight:600;margin-bottom:2px;display:flex;align-items:center;gap:6px;}
+.wp-hdr::before{content:'';width:6px;height:6px;border-radius:50%;background:var(--green);display:inline-block;}
+.wp-sub{font-size:10px;color:var(--muted);margin-bottom:9px;}
+.lanes{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;}
+.lane{background:var(--surface2);border-radius:6px;padding:8px;}
+.lt{font-size:9px;text-transform:uppercase;letter-spacing:.06em;font-weight:600;margin-bottom:5px;}
+.lt1c{color:#93c5fd;}.lt2c{color:#6ee7b7;}.lt3c{color:#fcd34d;}.lt4c{color:#fca5a5;}
+.wi{display:flex;align-items:center;gap:3px;padding:3px 0;border-bottom:1px solid var(--border);font-size:10px;}
+.wi:last-child{border-bottom:none;}
+.wi-r{color:var(--hint);min-width:11px;}
+.wi-n{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.wi-w{color:var(--green);font-weight:600;}
+
+.toolbar{display:flex;flex-wrap:wrap;gap:7px;align-items:center;margin-bottom:9px;}
+.toolbar label{font-size:11px;color:var(--muted);}
+select{background:var(--surface);border:1px solid var(--border);color:var(--text);border-radius:5px;padding:4px 7px;font-size:11px;cursor:pointer;outline:none;}
+select:focus{border-color:var(--accent);}
+.btn{border:1px solid var(--border);background:var(--surface);color:var(--text);border-radius:5px;padding:4px 10px;font-size:11px;cursor:pointer;display:inline-flex;align-items:center;gap:4px;}
+.btn:hover{background:var(--surface2);}
+.btn.active{background:rgba(52,211,153,.08);border-color:rgba(52,211,153,.28);color:var(--green);}
+.btn .dot{width:5px;height:5px;border-radius:50%;background:var(--green);}
+.spacer{flex:1;}
+.sw{position:relative;}
+.sw input{background:var(--surface);border:1px solid var(--border);color:var(--text);border-radius:5px;padding:4px 7px 4px 22px;font-size:11px;outline:none;width:130px;}
+.sw input:focus{border-color:var(--accent);}
+.sw::before{content:'⌕';position:absolute;left:6px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:12px;pointer-events:none;}
+
+table{width:100%;border-collapse:collapse;}
+thead th{padding:6px 8px;text-align:left;font-size:9px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);border-bottom:1px solid var(--border);cursor:pointer;user-select:none;white-space:nowrap;}
+thead th.active{color:var(--accent);}
+thead th:hover:not(.active){color:var(--text);}
+td{padding:7px 8px;border-bottom:1px solid var(--border);vertical-align:middle;}
+tr:last-child td{border-bottom:none;}
+tr:hover td{background:var(--surface2);}
+tr.hl td{background:rgba(52,211,153,.03);}
+tr.hl td:first-child{border-left:2px solid rgba(52,211,153,.28);padding-left:6px;}
+.iname{font-size:12px;font-weight:500;}
+.tt{display:inline-flex;align-items:center;justify-content:center;width:18px;height:14px;border-radius:2px;font-size:8px;font-weight:700;}
+.t1b{background:rgba(96,165,250,.15);color:#93c5fd;}
+.t2b{background:rgba(52,211,153,.13);color:#6ee7b7;}
+.t3b{background:rgba(251,191,36,.13);color:#fcd34d;}
+.t4b{background:rgba(250,68,84,.15);color:#fca5a5;}
+.br{display:flex;align-items:center;gap:5px;}
+.bb{background:rgba(255,255,255,.06);border-radius:2px;height:4px;flex:1;overflow:hidden;}
+.bf{height:4px;border-radius:2px;}
+.bp{background:var(--blue);}.bhi{background:var(--green);}.bmd{background:var(--muted);}.blo{background:var(--red);}
+.sn{min-width:34px;text-align:right;font-size:10px;}
+.chi{color:var(--green);font-weight:600;}.clo{color:var(--red);}.cmd{color:var(--muted);}
+.hot{display:inline-block;width:5px;height:5px;border-radius:50%;background:var(--accent);margin-left:3px;vertical-align:middle;}
+.src{font-size:10px;color:var(--hint);margin-top:9px;padding-top:7px;border-top:1px solid var(--border);}
+.mu-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:10px;margin-top:4px;}
+.mu-card{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:10px 11px;}
+.mu-hdr{font-size:12px;font-weight:700;margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid var(--border);}
+.mu-good{color:var(--green);}
+.mu-bad{color:var(--red);}
+.mu-ally{color:#5b9dff;}
+.mu-row{display:flex;align-items:center;gap:7px;padding:4px 0;font-size:11px;}
+.mu-name{flex:0 0 84px;color:var(--text);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.mu-row .br{flex:1;}
+.mu-m{flex:0 0 auto;font-size:9px;color:var(--hint);white-space:nowrap;}
+
+.ppatch{background:var(--surface);border:1px solid rgba(52,211,153,.2);border-radius:8px;padding:12px 14px;margin-bottom:11px;}
+.pp-hdr{display:flex;align-items:center;gap:7px;margin-bottom:2px;}
+.pp-hdr h3{font-size:12px;font-weight:600;}
+.new-b{background:rgba(52,211,153,.13);color:var(--green);font-size:9px;font-weight:700;padding:2px 6px;border-radius:3px;text-transform:uppercase;}
+.stale-b{background:rgba(251,191,36,.1);color:var(--amber);font-size:9px;font-weight:600;padding:2px 6px;border-radius:3px;}
+.pp-meta{font-size:10px;color:var(--muted);margin-bottom:10px;}
+.pp-meta a{color:var(--blue);text-decoration:none;}
+.bcols{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;}
+.bcol{background:var(--surface2);border-radius:6px;padding:8px;}
+.bcol-t{font-size:9px;text-transform:uppercase;letter-spacing:.07em;font-weight:600;margin-bottom:6px;}
+.bct-e{color:#93c5fd;}.bct-c{color:var(--green);}.bct-l{color:#fca5a5;}
+.bitem{display:flex;align-items:flex-start;gap:4px;padding:3px 0;border-bottom:1px solid var(--border);}
+.bitem:last-child{border-bottom:none;}
+.btt{display:inline-flex;align-items:center;justify-content:center;width:15px;height:14px;border-radius:2px;font-size:8px;font-weight:700;flex-shrink:0;margin-top:1px;}
+.btt1{background:rgba(96,165,250,.15);color:#93c5fd;}
+.btt2{background:rgba(52,211,153,.13);color:#6ee7b7;}
+.btt3{background:rgba(251,191,36,.13);color:#fcd34d;}
+.btt4{background:rgba(250,68,84,.15);color:#fca5a5;}
+.bname{font-size:11px;font-weight:500;line-height:1.3;}
+.bnote{font-size:9px;color:var(--muted);margin-top:1px;}
+
+.ab-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin-bottom:11px;}
+.ab-card{background:var(--surface);border:1px solid var(--border);border-radius:7px;padding:10px;}
+.ab-num{font-size:9px;text-transform:uppercase;letter-spacing:.07em;font-weight:700;margin-bottom:4px;}
+.ab-name{font-size:11px;font-weight:600;margin-bottom:3px;}
+.ab-desc{font-size:10px;color:var(--muted);line-height:1.5;}
+.ab-wr{font-size:10px;margin-top:5px;}
+.n1{color:var(--a1);}.n2{color:var(--a2);}.n3{color:var(--a3);}.nR{color:var(--aR);}
+
+.pri-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin-bottom:11px;}
+.pri-card{background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:7px 9px;display:flex;align-items:center;gap:7px;}
+.pri-rank{font-size:15px;font-weight:800;color:var(--hint);min-width:18px;}
+.pri-badge{width:24px;height:24px;border-radius:4px;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.pb1{background:rgba(244,114,182,.15);color:var(--a1);}
+.pb2{background:rgba(56,189,248,.12);color:var(--a2);}
+.pb3{background:rgba(167,139,250,.12);color:var(--a3);}
+.pbR{background:rgba(251,191,36,.13);color:var(--aR);}
+.pri-nm{font-size:10px;font-weight:500;}
+.pri-sub{font-size:9px;color:var(--muted);}
+.seq-wrap{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:5px;}
+.snn{width:25px;height:25px;border-radius:4px;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;border:1.5px solid transparent;position:relative;}
+.snn .lv{position:absolute;top:-8px;left:50%;transform:translateX(-50%);font-size:8px;color:var(--hint);}
+.snn.s1{background:rgba(244,114,182,.15);border-color:rgba(244,114,182,.3);color:var(--a1);}
+.snn.s2{background:rgba(56,189,248,.12);border-color:rgba(56,189,248,.25);color:var(--a2);}
+.snn.s3{background:rgba(167,139,250,.12);border-color:rgba(167,139,250,.25);color:var(--a3);}
+.snn.sR{background:rgba(251,191,36,.13);border-color:rgba(251,191,36,.3);color:var(--aR);}
+.sec-t{font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);font-weight:600;margin-bottom:6px;}
+.legend{display:flex;gap:12px;flex-wrap:wrap;margin-top:9px;}
+.legend-item{display:flex;align-items:center;gap:4px;font-size:10px;color:var(--muted);}
+
+
+.upd-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:200;align-items:flex-start;justify-content:center;padding-top:60px;overflow-y:auto;}
+.upd-overlay.show{display:flex;}
+.upd-box{background:var(--surface);border:1px solid var(--border2);border-radius:11px;padding:24px 28px;width:520px;max-width:95vw;margin-bottom:40px;}
+.upd-box h2{font-size:15px;font-weight:700;margin-bottom:3px;}
+.upd-box .sub{font-size:11px;color:var(--muted);margin-bottom:16px;}
+.upd-steps{margin-bottom:14px;}
+.upd-step{display:flex;align-items:flex-start;gap:9px;padding:6px 0;border-bottom:1px solid var(--border);font-size:11px;color:var(--muted);}
+.upd-step:last-child{border-bottom:none;}
+.upd-step .si{width:18px;text-align:center;flex-shrink:0;font-size:13px;margin-top:1px;}
+.upd-step.done{color:var(--green);}
+.upd-step.active{color:var(--text);}
+.upd-step.err{color:var(--red);}
+.upd-step.skip{color:var(--hint);}
+.upd-section{font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--hint);font-weight:600;padding:8px 0 3px;border-bottom:1px solid var(--border);}
+.upd-summary{background:var(--surface2);border-radius:7px;padding:10px 14px;font-size:11px;line-height:1.7;margin-bottom:12px;display:none;}
+.upd-summary.show{display:block;}
+.upd-close{background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:6px;padding:6px 18px;font-size:12px;cursor:pointer;display:none;}
+.upd-close.show{display:inline-block;}
+.upd-progress{height:3px;background:var(--surface2);border-radius:2px;margin-bottom:16px;overflow:hidden;}
+.upd-progress-bar{height:100%;background:var(--green);border-radius:2px;transition:width .4s;}
+.app-update-bar{display:none;background:rgba(250,68,84,.1);border-bottom:1px solid rgba(250,68,84,.3);padding:6px 18px;align-items:center;gap:10px;font-size:11px;color:#fa8080;cursor:pointer;}
+.app-update-bar.show{display:flex;}
+.hero-banner{width:100%;height:180px;object-fit:cover;object-position:center 20%;display:block;flex-shrink:0;}
+.app-update-bar strong{color:#fa4454;}
+.app-update-bar .upd-action{background:#fa4454;color:#fff;border:none;border-radius:4px;padding:3px 12px;font-size:11px;font-weight:700;cursor:pointer;margin-left:auto;flex-shrink:0;}
+.app-update-bar .upd-dismiss{color:#7a7a88;font-size:18px;cursor:pointer;line-height:1;flex-shrink:0;}
+.rank-dot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:4px;vertical-align:middle;}
+.nav-tabs{display:flex;gap:1px;padding:0 18px;background:var(--surface);border-bottom:1px solid var(--border);}
+.nav-tab{padding:8px 16px;font-size:12px;cursor:pointer;border-bottom:2px solid transparent;color:var(--muted);user-select:none;font-weight:500;}
+.nav-tab:hover{color:var(--text);}
+.nav-tab.active{color:var(--text);border-bottom-color:var(--accent);}
+.rank-banner{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:14px 16px;margin-bottom:14px;}
+.rank-banner h3{font-size:13px;font-weight:600;margin-bottom:6px;}
+.rank-banner p{font-size:12px;color:var(--muted);line-height:1.7;white-space:pre-line;}
+.lb-filters{display:flex;gap:8px;align-items:center;margin-bottom:14px;flex-wrap:wrap;}
+.lb-table{width:100%;border-collapse:collapse;}
+.lb-table th{padding:7px 10px;text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);border-bottom:1px solid var(--border);}
+.lb-table td{padding:8px 10px;border-bottom:1px solid var(--border);font-size:12px;vertical-align:middle;}
+.lb-table tr:hover td{background:var(--surface2);}
+.lb-table tr:last-child td{border-bottom:none;}
+.lb-pos{font-size:14px;font-weight:800;color:var(--hint);min-width:30px;}
+.lb-pos.top3{color:var(--amber);}
+.hero-chips{display:flex;gap:4px;flex-wrap:wrap;}
+.hero-chip{background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:2px 7px;font-size:10px;color:var(--muted);}
+.map-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:14px;}
+.map-card{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px;}
+.map-card h3{font-size:12px;font-weight:600;margin-bottom:4px;}
+.map-card .mc-sub{font-size:11px;color:var(--muted);margin-bottom:10px;}
+.map-placeholder{background:var(--surface2);border-radius:6px;height:160px;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:8px;border:1px dashed var(--hint);}
+.map-placeholder .mp-icon{font-size:32px;opacity:.4;}
+.map-placeholder p{font-size:11px;color:var(--hint);text-align:center;line-height:1.5;max-width:200px;}
+.coming-soon{display:inline-block;background:rgba(96,165,250,.1);border:1px solid rgba(96,165,250,.2);color:var(--blue);border-radius:4px;padding:2px 8px;font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;}
+#rankSel option{background:var(--surface2);color:var(--text);}
+
+/* ── TERMS OF SERVICE MODAL ─────────────────────────────────────────────── */
+.tos-overlay{position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:999;display:flex;align-items:center;justify-content:center;padding:20px;}
+.tos-modal{background:#16161b;border:1px solid rgba(255,255,255,0.13);border-radius:12px;width:540px;max-width:95vw;max-height:90vh;display:flex;flex-direction:column;overflow:hidden;}
+.tos-header{padding:18px 22px 14px;border-bottom:1px solid rgba(255,255,255,0.07);flex-shrink:0;}
+.tos-logo{display:flex;align-items:center;gap:9px;margin-bottom:10px;}
+.tos-logo-sq{width:28px;height:28px;background:#fa4454;border-radius:6px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:12px;color:#fff;flex-shrink:0;}
+.tos-title{font-size:13px;font-weight:600;color:#ededf0;margin-bottom:2px;}
+.tos-sub{font-size:11px;color:#7a7a88;}
+.tos-lang{display:flex;gap:6px;margin-bottom:12px;}
+.tos-lb{background:#1e1e25;border:1px solid rgba(255,255,255,0.08);color:#7a7a88;border-radius:4px;padding:3px 11px;font-size:10px;cursor:pointer;}
+.tos-lb.on{border-color:#fa4454;color:#fa4454;background:rgba(250,68,84,.08);}
+.tos-body{padding:14px 22px;overflow-y:auto;flex:1;}
+.tos-body::-webkit-scrollbar{width:3px;}
+.tos-body::-webkit-scrollbar-thumb{background:#26262f;border-radius:2px;}
+.tos-sec{margin-bottom:13px;}
+.tos-sec h3{font-size:11px;font-weight:600;color:#c8c8d0;margin-bottom:4px;}
+.tos-sec p{font-size:11px;color:#7a7a88;line-height:1.75;}
+.tos-hbox{background:#1e1e25;border-left:2px solid #fa4454;border-radius:0 5px 5px 0;padding:9px 12px;margin:10px 0;}
+.tos-hbox p{font-size:11px;color:#c8c8d0;line-height:1.75;}
+.tos-ibox{background:rgba(96,165,250,.06);border-left:2px solid rgba(96,165,250,.4);border-radius:0 5px 5px 0;padding:9px 12px;margin:10px 0;}
+.tos-ibox p{font-size:11px;color:#93c5fd;line-height:1.75;}
+.tos-footer{padding:14px 22px;border-top:1px solid rgba(255,255,255,0.07);display:flex;flex-direction:column;gap:9px;flex-shrink:0;}
+.tos-crow{display:flex;align-items:flex-start;gap:8px;cursor:pointer;user-select:none;}
+.tos-cb{width:15px;height:15px;border:1px solid rgba(255,255,255,0.2);border-radius:3px;background:#1e1e25;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px;font-size:10px;color:#fff;}
+.tos-cb.on{background:#fa4454;border-color:#fa4454;}
+.tos-crow span{font-size:11px;color:#7a7a88;line-height:1.5;}
+.tos-brow{display:flex;gap:8px;}
+.tos-decline{flex:1;background:transparent;border:1px solid rgba(255,255,255,0.1);color:#7a7a88;border-radius:6px;padding:8px;font-size:12px;cursor:pointer;text-align:center;}
+.tos-decline:hover{background:var(--surface2);}
+.tos-accept{flex:2;background:#fa4454;border:none;color:#fff;border-radius:6px;padding:9px;font-size:12px;font-weight:700;cursor:pointer;text-align:center;opacity:.5;pointer-events:none;}
+.tos-accept.enabled{opacity:1;pointer-events:all;}
+.tos-accept.enabled:hover{background:#e03344;}
+.tos-vnote{font-size:9px;color:#3e3e4a;text-align:center;}
+.tos-tag{display:inline-block;background:rgba(250,68,84,.1);color:#fa8080;border-radius:3px;padding:1px 5px;font-size:9px;font-weight:600;margin-left:4px;}
+.langpill{display:inline-flex;align-items:center;gap:4px;background:var(--surface2);border:1px solid var(--border);border-radius:5px;padding:3px 8px;font-size:11px;font-weight:700;user-select:none;}.langpill .lp-opt{cursor:pointer;color:var(--hint);transition:color .15s;}.langpill .lp-opt:hover{color:var(--text);}.langpill .lp-opt.on{color:var(--green);}.langpill .lp-sep{color:var(--border);}
+</style>
+</head>
+<body>
+<!-- TERMS OF SERVICE MODAL -->
+<div class="tos-overlay" id="tosOverlay">
+  <div class="tos-modal">
+    <div class="tos-header">
+      <div class="tos-logo" style="display:flex;align-items:center;justify-content:space-between;width:100%">
+        <div style="display:flex;align-items:center;gap:8px">
+          <div class="tos-logo-sq">LC</div>
+          <span style="font-size:15px;font-weight:700;color:#ededf0">LaCitadel</span>
+        </div>
+        <div class="langpill" id="tosLangPill" title="Idioma / Language">
+          <span id="tosLangEs" class="lp-opt" onclick="setLang('es')">ES</span>
+          <span class="lp-sep">|</span>
+          <span id="tosLangEn" class="lp-opt" onclick="setLang('en')">EN</span>
+        </div>
+      </div>
+      <div class="tos-title" id="tosTitle">Aviso Legal y Términos de Uso</div>
+      <div class="tos-sub" id="tosSub">Lee antes de continuar · v1.0.0</div>
+    </div>
+    <div class="tos-body">
+      <!-- SPANISH -->
+      <div id="tosEs">
+        <div class="tos-hbox"><p>Al usar LaCitadel aceptas estos terminos en su totalidad. Si no estas de acuerdo, cierra la aplicacion.</p></div>
+        <div class="tos-sec"><h3>1. Naturaleza del software</h3><p>LaCitadel es una herramienta de estadisticas creada de forma independiente por un desarrollador individual. No esta afiliada, patrocinada ni aprobada por Valve Corporation ni por ninguna otra empresa. Es de uso gratuito y siempre lo sera.</p></div>
+        <div class="tos-sec"><h3>2. Limitacion de responsabilidad <span class="tos-tag">IMPORTANTE</span></h3><p>LaCitadel, su creador y cualquier entidad futura asociada al proyecto no asumen ninguna responsabilidad por danos directos, indirectos, accidentales o consecuentes que puedan derivarse del uso o la imposibilidad de uso de esta aplicacion. El uso es estrictamente bajo tu propia responsabilidad.</p></div>
+        <div class="tos-sec"><h3>3. Exactitud de la informacion</h3><p>Los datos mostrados provienen de fuentes publicas de la comunidad y pueden contener errores, retrasos o imprecisiones. No garantizamos la exactitud, completitud ni vigencia de la informacion en ningun momento.</p></div>
+        <div class="tos-sec"><h3>4. Privacidad y datos personales</h3><p>Esta aplicacion no recopila, almacena ni transmite datos personales a ningun servidor externo. Toda la informacion se guarda unicamente en tu dispositivo. No hay cuentas de usuario, no hay rastreo, no hay publicidad personalizada.</p></div>
+        <div class="tos-sec"><h3>5. Propiedad intelectual</h3><p>Deadlock, sus personajes, imagenes, nombres y cualquier contenido relacionado son propiedad exclusiva de Valve Corporation. LaCitadel no reclama derechos sobre ninguno de estos activos. Todas las marcas pertenecen a sus respectivos duenos.</p></div>
+        <div class="tos-sec"><h3>6. Donaciones voluntarias</h3><p>Las donaciones son completamente voluntarias y sirven unicamente para apoyar el desarrollo y mantenimiento de la herramienta. No garantizan ningun servicio, beneficio, acceso exclusivo ni compensacion de ningun tipo. No son reembolsables.</p></div>
+        <div class="tos-sec"><h3>7. Actividades futuras del desarrollador</h3><p>El creador de LaCitadel se reserva el derecho de desarrollar otros productos, servicios o empresas en el futuro, relacionados o no con este software. Dichas actividades son completamente independientes y no estan cubiertas por estos terminos.</p></div>
+        <div class="tos-sec"><h3>8. Codigo abierto y transparencia</h3><p>El codigo fuente de LaCitadel esta disponible publicamente para su inspeccion. Nunca ocultamos lo que hace la aplicacion. Se permite estudiar, auditar y verificar el codigo. Cualquier redistribucion o uso derivado debe acreditar al autor original (Chanlaser / LaCitadel).</p></div>
+        <div class="tos-ibox"><p>Este aviso legal constituye un acuerdo vinculante entre el usuario y el creador de LaCitadel. Al pulsar "Acepto y Continuo" confirmas haber leido, comprendido y aceptado todos los terminos anteriores.</p></div>
+      </div>
+      <!-- ENGLISH -->
+      <div id="tosEn" style="display:none">
+        <div class="tos-hbox"><p>By using LaCitadel you accept these terms in full. If you do not agree, close the application.</p></div>
+        <div class="tos-sec"><h3>1. Nature of the software</h3><p>LaCitadel is a statistics tool built independently by a single developer. It is not affiliated with, sponsored by, or endorsed by Valve Corporation or any other company. It is free to use and always will be.</p></div>
+        <div class="tos-sec"><h3>2. Limitation of liability <span class="tos-tag">IMPORTANT</span></h3><p>LaCitadel, its creator, and any future entity associated with the project assume no responsibility for direct, indirect, incidental, or consequential damages arising from the use or inability to use this application. Use is strictly at your own risk.</p></div>
+        <div class="tos-sec"><h3>3. Accuracy of information</h3><p>The data shown comes from public community sources and may contain errors, delays, or inaccuracies. We do not guarantee the accuracy, completeness, or timeliness of the information at any time.</p></div>
+        <div class="tos-sec"><h3>4. Privacy and personal data</h3><p>This application does not collect, store, or transmit personal data to any external server. All information is saved only on your device. There are no user accounts, no tracking, no personalized advertising.</p></div>
+        <div class="tos-sec"><h3>5. Intellectual property</h3><p>Deadlock, its characters, images, names, and any related content are the exclusive property of Valve Corporation. LaCitadel claims no rights over any of these assets. All trademarks belong to their respective owners.</p></div>
+        <div class="tos-sec"><h3>6. Voluntary donations</h3><p>Donations are entirely voluntary and serve only to support the development and maintenance of the tool. They guarantee no service, benefit, exclusive access, or compensation of any kind. They are non-refundable.</p></div>
+        <div class="tos-sec"><h3>7. Future activities of the developer</h3><p>The creator of LaCitadel reserves the right to develop other products, services, or businesses in the future, whether or not related to this software. Such activities are entirely independent and are not covered by these terms.</p></div>
+        <div class="tos-sec"><h3>8. Open source and transparency</h3><p>LaCitadel's source code is publicly available for inspection. We never hide what the app does. You are permitted to study, audit, and verify the code. Any redistribution or derivative use must credit the original author (Chanlaser / LaCitadel).</p></div>
+        <div class="tos-ibox"><p>This legal notice constitutes a binding agreement between the user and the creator of LaCitadel. By clicking "Accept &amp; Continue" you confirm that you have read, understood, and accepted all the terms above.</p></div>
+      </div>
+    </div>
+    <div class="tos-footer">
+      <div class="tos-crow" onclick="tosCbToggle('tosCb1','tosAcceptBtn')">
+        <div class="tos-cb" id="tosCb1"></div>
+        <span id="tosCb1Lbl">He leído y acepto todos los términos</span>
+      </div>
+      <div class="tos-crow" onclick="tosCbToggle('tosCb2')">
+        <div class="tos-cb" id="tosCb2"></div>
+        <span id="tosCb2Lbl">No volver a mostrar en este dispositivo</span>
+      </div>
+      <div class="tos-brow">
+        <div class="tos-decline" id="tosDeclineBtn" onclick="tosDecline()">Salir</div>
+        <div class="tos-accept" id="tosAcceptBtn" onclick="tosAccept()">Acepto y Continúo</div>
+      </div>
+      <div class="tos-vnote" id="tosVnote">LaCitadel v1.0.0 · Chanlaser · Términos actualizados: 2026-05-26</div>
+    </div>
+  </div>
+</div>
+
+<header>
+  <div class="logo">DL</div>
+  <div class="htxt"><h1>LaCitadel</h1><p id="appSub">Deadlock Stats · Builds · Héroes · Habilidades</p></div>
+  <div class="hright">
+
+    <div class="langpill" id="langPill" title="Idioma / Language">
+      <span id="langEs" class="lp-opt" onclick="setLang('es')">ES</span>
+      <span class="lp-sep">|</span>
+      <span id="langEn" class="lp-opt" onclick="setLang('en')">EN</span>
+    </div>
+    <span class="pbadge" id="patchLabel">—</span>
+    <select id="rankSel" title="Rank filter — applied when pressing Update" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:5px;padding:3px 8px;font-size:11px;cursor:pointer;outline:none;max-width:160px;" onchange="setRank(this.value)"></select>
+    <button class="upd-btn" id="updateBtn" onclick="runUpdate()">↻ Actualizar Todo</button>
+  </div>
+</header>
+
+<img id="heroBanner" class="hero-banner" src="assets/header-wip-es.png" alt="Header en construccion">
+<div class="app-update-bar" id="appUpdateBar" onclick="handleUpdateClick()">
+  <span id="appUpdateMsg">⬆ <strong>Nueva versión disponible</strong> · Pending update — <span id="appUpdateVersion"></span></span>
+  <span id="appUpdateProgress" style="display:none;color:var(--green)">Descargando... <span id="appUpdatePct">0</span>%</span>
+  <button class="upd-action" id="appUpdateBtn">Instalar</button>
+  <span class="upd-dismiss" onclick="event.stopPropagation();dismissUpdate()" title="Dismiss">×</span>
+</div>
+
+<div class="nav-tabs" id="navTabs">
+  <div class="nav-tab active" id="nav-roster"  onclick="setNav('roster')">🎮 <span id="nt-roster">Plantel</span></div>
+  <div class="nav-tab"        id="nav-lb"       onclick="setNav('lb')">🏆 <span id="nt-lb">Clasificación</span></div>
+  <div class="nav-tab"        id="nav-patch"    onclick="setNav('patch')">📋 <span id="nt-patch">Parches</span></div>
+  <div class="nav-tab"        id="nav-map"      onclick="setNav('map')">🗺️ <span id="nt-map">Datos del Mapa</span></div>
+  <div class="nav-tab"        id="nav-logs"     onclick="setNav('logs')">🔍 <span id="nt-logs">Errores</span></div>
+</div>
+<div class="layout">
+  <div class="sidebar">
+    <div class="sb-top"><div class="sb-search"><input id="heroSearch" placeholder="Buscar héroes…" oninput="filterSB()"></div></div>
+    <div class="sb-list" id="sbList"></div>
+    <div class="sb-footer">
+      <div class="sb-lastup" id="lastUpLabel">Sin actualizar</div>
+      <div id="madeIn" style="font-size:9px;color:var(--hint);text-align:center;margin-top:5px;line-height:1.5;padding:5px 0;border-top:1px solid var(--border);">
+        Hecho en Puerto Rico 🇵🇷<br><span style="color:var(--hint);font-size:8px">LaCitadel · por Chanlaser</span><br><span style="color:var(--hint);font-size:8px">desarrollado con Claude (Anthropic)</span>
+      </div>
+      <div style="font-size:9px;color:var(--hint);text-align:center;margin-top:3px" id="appVersion"></div>
+      <div style="font-size:9px;color:var(--hint);text-align:center;margin-top:2px" id="autoUpLabel"></div>
+      <div class="sb-legend">
+        <div class="sl-row"><span class="pip pip-full"></span><span id="leg-full">Datos completos</span></div>
+        <div class="sl-row"><span class="pip pip-basic"></span><span id="leg-basic">Solo VIC y SEL</span></div>
+        <div class="sl-row"><span class="pip pip-new"></span><span id="leg-new">Héroe nuevo</span></div>
+        <div class="sl-row"><span class="pip pip-empty"></span><span id="leg-empty">Sin datos</span></div>
+      </div>
+    </div>
+  </div>
+  <div class="main"><div class="content" id="mainContent"></div></div>
+</div>
+
+<!-- UPDATE OVERLAY -->
+<div class="upd-overlay" id="updOverlay">
+  <div class="upd-box">
+    <h2 id="updTitle">Refresh Updating Dashboard</h2>
+    <div class="sub" id="updSub">Fetching data — rank filter applied on Update</div>
+    <div class="upd-progress"><div class="upd-progress-bar" id="updBar" style="width:0%"></div></div>
+    <div class="upd-steps" id="updSteps"></div>
+    <div class="upd-summary" id="updSummary"></div>
+    <button class="upd-close" id="updClose" onclick="closeUpd()">Cerrar</button>
+  </div>
+</div>
+
+<script>
+/**
+ * ==================================================================
+ *  LACITADEL — DEADLOCK STATS — OPEN COMMUNITY PROJECT
+ * ==================================================================
+ *
+ *  CORE PRINCIPLES (non-negotiable, always):
+ *    * Never Do Evil
+ *    * Never Break Valve TOS — Ever
+ *    * Read-only data — never touches the game client
+ *    * Respects rate limits on all external services
+ *    * No personal data collection beyond local preferences
+ *    * All sources are public community resources
+ *    * Open and free for every player, always
+ *
+ *  DATA SOURCES (all public, community-run):
+ *    - deadlock-api.com  — open source community API
+ *    - deadlock.coach    — community builds & guides
+ *    - metabot.gg        — stats (powered by deadlock-api.com)
+ *    - deadlocklabs.gg   — hero images via Cloudflare R2
+ *
+ *  FUTURE WEBSITE NOTES:
+ *    - Non-intrusive sidebar ads only — no popups, no tracking
+ *    - Free for all players forever — ad revenue covers hosting only
+ *    - GDPR-compliant — no cookies beyond user preferences
+ *    - Attribution to all data sources displayed in footer
+ * ==================================================================
+ */
+
+// ── INTERNATIONALIZATION (i18n) ───────────────────────────────────────────────
+// Default: Spanish (Español) — the primary language for LATAM/Spain audience
+let LANG = (function(){ try{ return localStorage.getItem('lc_lang')==='en'?'en':'es'; }catch(e){ return 'es'; } })(); // ES default; EN optional (persisted)
+
+// ── IMAGE & COLOR CONSTANTS ──────────────────────────────────────────────────
+const IMG_P   = 'https://game.deadlock.coach/vpk/panorama/images/heroes/';
+const IMG_S   = 'https://r2.deadlocklabs.gg/images/deadlock/api/heroes_';
+const COLORS  = ['#e74c8b','#3b82f6','#10b981','#f59e0b','#8b5cf6','#ef4444','#06b6d4','#84cc16'];
+
+// Internal hero image name mapping (slug → VPK asset name)
+const HI = {
+  'graves':'necro','seven':'gigawatt','mcginnis':'engineer','victor':'frank',
+  'kelvin':'kelvin','yamato':'yamato','billy':'punkgoat','ivy':'tengu',
+  'the-doorman':'doorman','dynamo':'sumo','mo-and-krill':'digger','haze':'haze',
+  'abrams':'bull','warden':'warden','vindicta':'hornet','grey-talon':'archer',
+  'vyper':'kali','drifter':'drifter','lash':'lash','silver':'werewolf',
+  'lady-geist':'spectre','calico':'nano','pocket':'synth','rem':'familiar',
+  'mirage':'mirage','mina':'vampirebat','paige':'bookworm','wraith':'wraith',
+  'infernus':'inferno','paradox':'chrono','celeste':'unicorn','bebop':'bebop',
+  'holliday':'astro','shiv':'shiv','apollo':'fencer','viscous':'viscous',
+  'sinclair':'magician','venator':'priest'
+};
+
+// Numeric hero IDs for api.deadlock-api.com item stats endpoint
+const HERO_NUMERIC_IDS = {
+  'graves':1,'abrams':2,'lash':3,'infernus':4,'shiv':6,'haze':7,
+  'dynamo':8,'grey-talon':10,'mo-and-krill':11,'pocket':13,'seven':15,
+  'vindicta':16,'lady-geist':18,'bebop':20,'kelvin':21,'ivy':22,
+  'paradox':25,'warden':27,'yamato':31,'mcginnis':37,'wraith':38,
+  'calico':40,'holliday':50,'vyper':51,'sinclair':52,'rem':54,
+  'billy':58,'victor':59,'drifter':60,'the-doorman':61,'silver':62,
+  'celeste':63,'apollo':64,'mina':65,'venator':66,'paige':67,'viscous':68,
+  'mirage':39,'billy':58,'viscous':68
+};
+
+// localStorage key — single store for all app data
+const STORE = 'dl_v3';
+
+const I18N = {
+  es: {
+    appTitle: 'LaCitadel',
+    appSub: 'Deadlock Stats · Builds · Héroes · Habilidades',
+    updateBtn: '↻ Actualizar Todo',
+    patchLabel: 'Parche',
+    lastUpdated: 'Actualizado:',
+    neverUpdated: 'Presiona ↻ Actualizar',
+    navRoster: 'Plantel',
+    navLeaderboard: 'Clasificación',
+    navPatch: 'Parches',
+    navMapData: 'Datos del Mapa',
+    navLogs: 'Errores',
+    heroRoster: 'Plantel de Héroes',
+    heroCount: 'héroes',
+    homeLivePrefix: 'En vivo · ',
+    homePressUpdate: 'Presiona ↻ Actualizar Todo para datos en vivo',
+    rankFilterStep: 'Filtro de rango: ',
+    phase1: 'FASE 1 — Tasas de Victoria y Selección',
+    phase2: 'FASE 2 — Builds, Habilidades y Orden',
+    phase3: 'FASE 3 — Stats de Ítems por Héroe',
+    phase4: 'FASE 4 — Clasificación',
+    phase5c: 'FASE 5 — Counters y Sinergias',
+    phase5s: 'FASE 5 — Guardando',
+    buildOrderUpdated: 'Build, habilidades y orden actualizados — datos anteriores eliminados',
+    noApiData: ' — sin datos en deadlock-api.com',
+    countersSynUpdated: 'Counters ({c}) y sinergias ({s}) actualizados ✓',
+    leaderboardUpdated: 'Clasificación actualizada: ',
+    playersSuffix: ' jugadores ✓',
+    updatedColon: 'Actualizado: ',
+    pressUpdateShort: 'Presiona ↻ Actualizar',
+    liveTagPrefix: 'En vivo · ',
+    pressUpdateStale: 'Presiona Actualizar',
+    noDataForHero: 'Sin datos para ',
+    noDataForHeroBody: 'Presiona <strong style="color:var(--green)">↻ Actualizar Todo</strong> para verificar si hay datos disponibles.',
+    prePatchUpdate: 'Pre-parche · Actualizar',
+    popularBuild: 'Build Más Popular',
+    bestDuosHdr: '🤝 Mejores dúos',
+    mostUsedWins: 'Ítems Más Usados en Victorias',
+    pickRateCol: 'Tasa Selección ↕',
+    winRateCol: 'Tasa Victoria ↕',
+    fullSequence: 'Secuencia completa ({n} puntos de habilidad)',
+    desktopOnly: 'Esta función solo está disponible en la App de Escritorio. Descarga la app para activar actualizaciones automáticas.',
+    fetchHeroErr: 'Error al obtener héroes: ',
+    fetchingItemWr: 'Obteniendo tasas de victoria por ítem...',
+    fetchingCounters: 'Obteniendo counters y mejores dúos...',
+    countersSynSub: 'Mejores y peores enfrentamientos + mejores compañeros por héroe',
+    savingData: 'Eliminando datos obsoletos y guardando...',
+    savedAt: 'Guardado ✓ — actualizado: ',
+    heroesWithFull: ' con datos completos',
+    heroesSuffix: ' héroes · ',
+    lbPos: 'Pos.',
+    lbPlayer: 'Jugador',
+    lbRegion: 'Región',
+    lbMainHero: 'Héroe principal',
+    lbTopHeroes: 'Héroes más usados (Top 3)',
+    lbPlayerRank: 'Rango',
+    lbWhyExample: 'ℹ️ ¿Por qué veo datos de ejemplo?',
+    lbExampleBody: 'La clasificación en vivo requiere acceso directo a la API de deadlock-api.com, lo que estará disponible en la <strong>Aplicación de Escritorio</strong> (próximamente). Los datos mostrados arriba son ejemplos para mostrar cómo se verá la sección.<br><br><strong>Qué incluirá cuando esté en vivo:</strong><br>- Nombre y región del jugador<br>- Los 5 héroes más usados por jugador<br>- Clasificación filtrada por región (NA, SA, EU, Asia, OCE, ME, CIS)<br>- Filtrado por rango (Iniciado hasta Eternus)<br>- Se actualiza cada vez que presionas ↻ Actualizar Todo',
+    comingSoonApp: 'Disponible en App',
+    srcPrefix: 'Fuente: ',
+    srcUpdated: ' · Actualizado: ',
+    countersSource: 'Fuente: deadlock-api.com · Mínimo 20 partidas por enfrentamiento',
+    itemWrReplaced: 'Tasa de victoria y selección por ítem reemplazados',
+    updatedHeroes: 'Actualizado ',
+    heroesNew: ' nuevos',
+    sumVicSel: ' héroes: VIC y SEL actualizados<br>',
+    sumBuilds: ' héroes: builds y habilidades actualizados<br>',
+    sumItems: ' héroes: ítems actualizados<br>',
+    sumPatch: 'Parche: ',
+    sumSaved: 'Guardado: ',
+    mapWhyTitle: 'ℹ️ ¿Por qué los datos del mapa no están disponibles aún?',
+    mapWhyBody: 'Los datos del mapa requieren el mapa de calor de deadlock-api.com, que utiliza renderizado en el lado del cliente (JavaScript genera el mapa visualmente). Esto no se puede obtener con scraping básico.<br><br><strong>La Aplicación de Escritorio podrá:</strong><br>- Usar la API directamente sin restricciones CORS<br>- Renderizar el mapa de calor de muertes con datos reales<br>- Filtrar por fase del juego, héroe y rango<br>- Superponer información de objetivos sobre el mapa<br>- Mostrar cambios entre parches (antes vs ahora)',
+    logNoRecords: 'Sin registros aún',
+    logNoRecordsBody: 'Los errores y resultados de cada actualización aparecerán aquí. Presiona ↻ Actualizar Todo para comenzar.',
+    logHistoryPre: 'Historial de las últimas ',
+    logHistoryPost: ' actualizaciones. Copia el log completo para reportar errores.',
+    gaiusQuote: '¡Qué devastación... Esta no era mi intención!',
+    gaiusAttrib: '— Gaius van Baelsar, Final Fantasy XIV · A Realm Reborn',
+    dataSafe: 'Tus datos anteriores están seguros. Verifica tu conexión e intenta de nuevo.',
+    mapCardDeathTitle: '💀 Mapa de calor de muertes',
+    mapCardDeathSub: 'Zonas donde los jugadores mueren con más frecuencia',
+    mapCardDeathDetail: 'Muestra puntos de alta mortalidad en el mapa basados en millones de partidas. Identifica zonas peligrosas por fase del juego (inicio, media, tarde).',
+    mapCardObjTitle: '🏛️ Datos de objetivos',
+    mapCardObjSub: 'Tiempos y tasas de destrucción por objetivo',
+    mapCardObjDetail: 'Orbe de éter, Patrones de la calle media, Torres, y Patrocinador. Muestra qué objetivos se toman primero en victorias vs derrotas.',
+    mapCardFarmTitle: '💰 Zonas de farmeo más eficientes',
+    mapCardFarmSub: 'Dónde acumulan más almas los jugadores ganadores',
+    mapCardFarmDetail: 'Mapa de calor de farm de almas. Muestra las rutas y zonas más eficientes según rango y héroe.',
+    mapCardLaneTitle: '🏃 Control de carriles',
+    mapCardLaneSub: 'Qué carriles dominan en victorias',
+    mapCardLaneDetail: 'Estadísticas de control por carril (arriba, abajo) según composición de equipo y picks de héroes.',
+    mapCardFightTitle: '⚔️ Zonas de enfrentamiento',
+    mapCardFightSub: 'Dónde ocurren más peleas de equipo',
+    mapCardFightDetail: 'Hotspots de combate grupal según fase del juego y composición.',
+    mapCardRotTitle: '🌀 Rotaciones del mapa',
+    mapCardRotSub: 'Cómo los jugadores de alto rango rotan',
+    mapCardRotDetail: 'Patrones de movimiento de los mejores jugadores por héroe y fase.',
+    liveData: 'En vivo',
+    pressUpdate: 'Presiona ↻ Actualizar para datos en vivo',
+    wrPr: 'VIC / SEL',
+    winRate: 'Tasa de Victoria',
+    pickRate: 'Tasa de Selección',
+    tier: 'Nivel',
+    asOf: 'Desde',
+    rankFilter: 'Filtro de Rango',
+    rankFilterTitle: 'Filtro de rango — se aplica al presionar Actualizar',
+    rankCurrent: 'Filtro de rango actual',
+    fullData: 'Datos completos',
+    basicStats: 'Solo VIC y SEL',
+    newHero: 'Héroe nuevo',
+    noData: 'Sin datos',
+    currentBuild: 'Build Actual',
+    itemStats: 'Stats de Ítems',
+    abilities: 'Habilidades',
+    earlyGame: 'Inicio de partida',
+    coreItems: 'Ítems principales',
+    lateGame: 'Tarde en partida',
+    viewSource: 'Ver fuente →',
+    item: 'Ítem',
+    winsBuild: 'Build Ganadora',
+    winsScore: 'Puntaje de Victorias',
+    sortBtn: 'Ordenar',
+    leaderboardTitle: 'Clasificación de Jugadores',
+    leaderboardSub: 'Top jugadores por rango y región',
+    region: 'Región',
+    player: 'Jugador',
+    rank: 'Rango',
+    topHeroes: 'Héroes más usados',
+    mapTitle: 'Datos del Mapa',
+    mapSub: 'Muertes, objetivos y zonas de peligro',
+    killHeatmap: 'Mapa de calor de muertes',
+    objectiveData: 'Datos de objetivos',
+    farmData: 'Zonas de farmeo',
+    updTitle: 'Refresh Actualizando Panel',
+    updSub: 'Reemplaza datos por héroe solo cuando la descarga sea exitosa',
+    // Banners / dynamic (use {p}=patch, {h}=hero, {n}=number)
+    patchOldTitle: 'El Parche {p} tiene {n}h — datos estabilizándose',
+    patchOldBody: 'Se necesitan ~72h de partidas clasificatorias. Vuelve en ~{n}h.',
+    fetchBuildTitle: 'Presiona Actualizar para obtener el build actual de {h}',
+    fetchBuildBody: 'El botón Actualizar descarga los builds de todos los héroes desde deadlock-api.com automáticamente.',
+    buildNotLoaded: 'Datos de build aún no cargados para {h}',
+    buildNotLoadedBody: 'La tasa de victoria y selección se muestran arriba. Presiona <strong style="color:var(--green)">↻ Actualizar Todo</strong> para descargar automáticamente el build actual, el orden de habilidades y los stats de ítems para {h}.',
+    countersNoData: 'Sin datos de counters todavía',
+    countersNoDataBody: 'Presiona ↻ Actualizar Todo para cargar los enfrentamientos y dúos de {h}. Requiere datos de la comunidad en el rango seleccionado.',
+    countersTitle: 'Parche {p}',
+    countersBody: 'Enfrentamientos y dúos de {h} según datos de la comunidad. % = tasa de victoria.',
+    strongVs: 'Le ganas a',
+    weakVs: 'Te ganan',
+    bestDuos: 'Mejores dúos',
+    itemsNotLoaded: 'Stats de ítems no cargados aún',
+    itemsNotLoadedBody: 'Presiona <strong>↻ Actualizar Todo</strong> para obtener las tasas de victoria y selección por ítem para {h}.',
+    abilNotLoadedTitle: 'Orden de habilidades no cargado',
+    abilNotLoadedBody: 'Presiona Actualizar para obtener el orden de subida de nivel actual de {h}.',
+    abilTitle: 'Parche {p}',
+    abilLive: 'Datos de habilidades actualizados.',
+    abilStale: 'Presiona Actualizar para cargar datos de habilidades para {h}.',
+    levelPriority: 'Prioridad de subida de nivel',
+    commonByLevel: 'Elección más común por nivel',
+    ultimate: 'Ultimate',
+    maxFirst: 'Subir primero',
+    secondPriority: '2da prioridad',
+    unlockEarlyMaxLate: 'Desbloquea temprano, sube al final',
+    maxLast: 'Subir al final',
+    liveLabel: 'En vivo',
+    defaultLabel: 'Datos por defecto',
+    refresh: 'Actualizar',
+    updatedAt: 'Actualizado ',
+    heroFetchFailed: 'Fallo al obtener héroes',
+    buildUpdated: 'Builds actualizados',
+    keepPrevious: 'Se mantienen datos anteriores si existen',
+    itemsUpdatedFor: 'Ítems actualizados para ',
+    itemsReplaced: 'Tasa de victoria y selección por ítem reemplazados',
+    updateComplete: 'Actualización completa',
+    // TOS
+    tosTitle: 'Aviso Legal y Términos de Uso',
+    tosSub: 'Lee antes de continuar · v1.0.0',
+    tosAcceptCheck: 'He leído y acepto todos los términos',
+    tosNoShow: 'No volver a mostrar en este dispositivo',
+    tosExit: 'Salir',
+    tosAcceptBtn: 'Acepto y Continúo',
+    tosVnote: 'LaCitadel v1.0.0 · Chanlaser · Términos actualizados: 2026-05-26',
+    tosMustAccept: 'Debes aceptar los términos para usar LaCitadel.'
+  },
+  en: {
+    appTitle: 'LaCitadel',
+    appSub: 'Deadlock Stats · Builds · Heroes · Abilities',
+    updateBtn: '↻ Update All',
+    patchLabel: 'Patch',
+    lastUpdated: 'Updated:',
+    neverUpdated: 'Press ↻ Update',
+    navRoster: 'Roster',
+    navLeaderboard: 'Leaderboard',
+    navPatch: 'Patches',
+    navMapData: 'Map Data',
+    navLogs: 'Errors',
+    heroRoster: 'Hero Roster',
+    heroCount: 'heroes',
+    homeLivePrefix: 'Live · ',
+    homePressUpdate: 'Press ↻ Update All for live data',
+    rankFilterStep: 'Rank filter: ',
+    phase1: 'PHASE 1 — Win & Pick Rates',
+    phase2: 'PHASE 2 — Builds, Abilities & Order',
+    phase3: 'PHASE 3 — Per-Hero Item Stats',
+    phase4: 'PHASE 4 — Leaderboard',
+    phase5c: 'PHASE 5 — Counters & Synergies',
+    phase5s: 'PHASE 5 — Saving',
+    buildOrderUpdated: 'Build, abilities and order updated — previous data removed',
+    noApiData: ' — no data on deadlock-api.com',
+    countersSynUpdated: 'Counters ({c}) and synergies ({s}) updated ✓',
+    leaderboardUpdated: 'Leaderboard updated: ',
+    playersSuffix: ' players ✓',
+    updatedColon: 'Updated: ',
+    pressUpdateShort: 'Press ↻ Update',
+    liveTagPrefix: 'Live · ',
+    pressUpdateStale: 'Press Update',
+    noDataForHero: 'No data for ',
+    noDataForHeroBody: 'Press <strong style="color:var(--green)">↻ Update All</strong> to check whether data is available.',
+    prePatchUpdate: 'Pre-patch · Update',
+    popularBuild: 'Most Popular Build',
+    bestDuosHdr: '🤝 Best duos',
+    mostUsedWins: 'Most-Used Items in Wins',
+    pickRateCol: 'Pick Rate ↕',
+    winRateCol: 'Win Rate ↕',
+    fullSequence: 'Full sequence ({n} ability points)',
+    desktopOnly: 'This feature is only available in the Desktop App. Download the app to enable automatic updates.',
+    fetchHeroErr: 'Hero fetch error: ',
+    fetchingItemWr: 'Fetching per-item win rates...',
+    fetchingCounters: 'Fetching counters and best duos...',
+    countersSynSub: 'Best and worst matchups + best teammates per hero',
+    savingData: 'Removing stale data and saving...',
+    savedAt: 'Saved ✓ — updated: ',
+    heroesWithFull: ' with full data',
+    heroesSuffix: ' heroes · ',
+    lbPos: 'Pos.',
+    lbPlayer: 'Player',
+    lbRegion: 'Region',
+    lbMainHero: 'Main hero',
+    lbTopHeroes: 'Most-played heroes (Top 3)',
+    lbPlayerRank: 'Rank',
+    lbWhyExample: 'ℹ️ Why am I seeing example data?',
+    lbExampleBody: 'The live leaderboard requires direct access to the deadlock-api.com API, which will be available in the <strong>Desktop App</strong> (coming soon). The data shown above are examples to illustrate how the section will look.<br><br><strong>What it will include when live:</strong><br>- Player name and region<br>- Each player\'s 5 most-played heroes<br>- Leaderboard filtered by region (NA, SA, EU, Asia, OCE, ME, CIS)<br>- Filtered by rank (Initiate through Eternus)<br>- Updates every time you press ↻ Update All',
+    comingSoonApp: 'Available in App',
+    srcPrefix: 'Source: ',
+    srcUpdated: ' · Updated: ',
+    countersSource: 'Source: deadlock-api.com · Minimum 20 matches per matchup',
+    itemWrReplaced: 'Per-item win and pick rate replaced',
+    updatedHeroes: 'Updated ',
+    heroesNew: ' new',
+    sumVicSel: ' heroes: WR & PR updated<br>',
+    sumBuilds: ' heroes: builds and abilities updated<br>',
+    sumItems: ' heroes: items updated<br>',
+    sumPatch: 'Patch: ',
+    sumSaved: 'Saved: ',
+    mapWhyTitle: 'ℹ️ Why isn\'t map data available yet?',
+    mapWhyBody: 'Map data requires the deadlock-api.com heatmap, which uses client-side rendering (JavaScript draws the map visually). This can\'t be obtained with basic scraping.<br><br><strong>The Desktop App will be able to:</strong><br>- Use the API directly without CORS restrictions<br>- Render the kill heatmap with real data<br>- Filter by game phase, hero and rank<br>- Overlay objective info on the map<br>- Show changes between patches (before vs after)',
+    logNoRecords: 'No records yet',
+    logNoRecordsBody: 'Errors and results from each update will appear here. Press ↻ Update All to begin.',
+    logHistoryPre: 'History of the last ',
+    logHistoryPost: ' updates. Copy the full log to report errors.',
+    gaiusQuote: 'How devastating... This was not my intention!',
+    gaiusAttrib: '— Gaius van Baelsar, Final Fantasy XIV · A Realm Reborn',
+    dataSafe: 'Your previous data is safe. Check your connection and try again.',
+    mapCardDeathTitle: '💀 Kill heatmap',
+    mapCardDeathSub: 'Zones where players die most often',
+    mapCardDeathDetail: 'Shows high-mortality points on the map based on millions of matches. Identifies danger zones by game phase (early, mid, late).',
+    mapCardObjTitle: '🏛️ Objective data',
+    mapCardObjSub: 'Destruction times and rates per objective',
+    mapCardObjDetail: 'Ether orb, mid-lane patterns, towers, and Patron. Shows which objectives are taken first in wins vs losses.',
+    mapCardFarmTitle: '💰 Most efficient farm zones',
+    mapCardFarmSub: 'Where winning players gather the most souls',
+    mapCardFarmDetail: 'Soul-farm heatmap. Shows the most efficient routes and zones by rank and hero.',
+    mapCardLaneTitle: '🏃 Lane control',
+    mapCardLaneSub: 'Which lanes dominate in wins',
+    mapCardLaneDetail: 'Per-lane control stats (top, bottom) by team composition and hero picks.',
+    mapCardFightTitle: '⚔️ Fight zones',
+    mapCardFightSub: 'Where most team fights happen',
+    mapCardFightDetail: 'Group-combat hotspots by game phase and composition.',
+    mapCardRotTitle: '🌀 Map rotations',
+    mapCardRotSub: 'How high-rank players rotate',
+    mapCardRotDetail: 'Movement patterns of the best players by hero and phase.',
+    liveData: 'Live',
+    pressUpdate: 'Press ↻ Update for live data',
+    wrPr: 'WR / PR',
+    winRate: 'Win Rate',
+    pickRate: 'Pick Rate',
+    tier: 'Tier',
+    asOf: 'As of',
+    rankFilter: 'Rank Filter',
+    rankFilterTitle: 'Rank filter — applied when pressing Update',
+    rankCurrent: 'Current rank filter',
+    fullData: 'Full data',
+    basicStats: 'WR & PR only',
+    newHero: 'New hero',
+    noData: 'No data',
+    currentBuild: 'Current Build',
+    itemStats: 'Item Stats',
+    abilities: 'Abilities',
+    earlyGame: 'Early game',
+    coreItems: 'Core items',
+    lateGame: 'Late game',
+    viewSource: 'View source →',
+    item: 'Item',
+    winsBuild: 'Winning Build',
+    winsScore: 'Wins Score',
+    sortBtn: 'Sort',
+    leaderboardTitle: 'Player Leaderboard',
+    leaderboardSub: 'Top players by rank and region',
+    region: 'Region',
+    player: 'Player',
+    rank: 'Rank',
+    topHeroes: 'Most-played heroes',
+    mapTitle: 'Map Data',
+    mapSub: 'Kills, objectives and danger zones',
+    killHeatmap: 'Kill heatmap',
+    objectiveData: 'Objective data',
+    farmData: 'Farm zones',
+    updTitle: 'Refresh Updating Panel',
+    updSub: 'Replaces per-hero data only when the download succeeds',
+    patchOldTitle: 'Patch {p} is {n}h old — data still stabilizing',
+    patchOldBody: '~72h of ranked matches needed. Check back in ~{n}h.',
+    fetchBuildTitle: "Press Update to fetch {h}'s current build",
+    fetchBuildBody: 'The Update button fetches builds for all heroes from deadlock-api.com automatically.',
+    buildNotLoaded: 'Build data not yet loaded for {h}',
+    buildNotLoadedBody: 'Win and pick rates are shown above. Press <strong style="color:var(--green)">↻ Update All</strong> to automatically download the current build, ability order and item stats for {h}.',
+    countersNoData: 'No counter data yet',
+    countersNoDataBody: 'Press ↻ Update All to load {h}\'s matchups and duos. Requires community data at the selected rank.',
+    countersTitle: 'Patch {p}',
+    countersBody: '{h} matchups and duos from community data. % = win rate.',
+    strongVs: 'You beat',
+    weakVs: 'Beaten by',
+    bestDuos: 'Best duos',
+    itemsNotLoaded: 'Item stats not loaded yet',
+    itemsNotLoadedBody: 'Press <strong>↻ Update All</strong> to fetch per-item win and pick rates for {h}.',
+    abilNotLoadedTitle: 'No ability sequence loaded',
+    abilNotLoadedBody: "Press Update to fetch the current level-up order for {h}.",
+    abilTitle: 'Patch {p}',
+    abilLive: 'Ability data updated.',
+    abilStale: 'Press Update to load ability data for {h}.',
+    levelPriority: 'Level-up priority',
+    commonByLevel: 'Most common choice by level',
+    ultimate: 'Ultimate',
+    maxFirst: 'Max first',
+    secondPriority: '2nd priority',
+    unlockEarlyMaxLate: 'Unlock early, max later',
+    maxLast: 'Max last',
+    liveLabel: 'Live data',
+    defaultLabel: 'Default data',
+    refresh: 'Update',
+    updatedAt: 'Updated ',
+    heroFetchFailed: 'Hero fetch failed',
+    buildUpdated: 'Build updated',
+    keepPrevious: 'Previous data kept if it exists',
+    itemsUpdatedFor: 'Items updated for ',
+    itemsReplaced: 'Per-item win and pick rate replaced',
+    updateComplete: 'Update complete',
+    tosTitle: 'Legal Notice & Terms of Use',
+    tosSub: 'Read before continuing · v1.0.0',
+    tosAcceptCheck: 'I have read and accept all the terms',
+    tosNoShow: "Don't show again on this device",
+    tosExit: 'Exit',
+    tosAcceptBtn: 'Accept & Continue',
+    tosVnote: 'LaCitadel v1.0.0 · Chanlaser · Terms updated: 2026-05-26',
+    tosMustAccept: 'You must accept the terms to use LaCitadel.'
+  }
+};
+
+// Rank-specific "why no data" messages — noob-friendly explanations
+const RANK_MSGS = {
+  es: {
+    all:       { title: "Por que los datos combinan todos los rangos?",      body: "Cuando seleccionas Todos los Rangos, los datos incluyen partidas desde jugadores sin clasificar hasta Eternus. Esto hace las estadisticas menos precisas para tu nivel especifico, ya que novatos y profesionales juegan muy diferente. Recomendamos filtrar por tu rango para resultados mas relevantes." },
+    obscurus:  { title: "Por que hay pocos datos para Obscurus?",            body: "Los jugadores sin clasificar estan completando sus partidas de colocacion. Sus estadisticas son menos confiables porque aun no tienen un nivel de habilidad definido y los resultados varian mucho mientras el juego calibra tu nivel. Completa tus partidas de colocacion para aparecer en las estadisticas de tu rango." },
+    initiate:  { title: "Por que faltan datos para Iniciado?",               body: "Iniciado es el primer rango oficial. Los datos existen pero con menos partidas porque los jugadores suben de rango rapidamente, las estadisticas cambian mucho entre parches, y los builds aqui difieren del meta de alto rango. Valido para aprender el juego, pero consulta rangos mas altos para el meta competitivo." },
+    seeker:    { title: "Pocos datos en Buscador",                           body: "El rango Buscador tiene datos disponibles pero con una muestra moderada. Los jugadores estan aprendiendo mecanicas basicas, por lo que los builds reflejan mas experimentacion que meta optimizado." },
+    alchemist: { title: "Datos de Alquimista",                              body: "Alquimista tiene datos suficientes para estadisticas generales. Los jugadores estan desarrollando su estilo de juego. Los builds son confiables pero pueden diferir del meta de alto rango." },
+    arcanist:  { title: "Datos de Arcanista",                               body: "Arcanista representa jugadores intermedios. Las estadisticas son confiables y los builds reflejan un meta mas definido. Buena fuente de informacion." },
+    ritualist: { title: "Datos de Ritualista",                              body: "Ritualista es donde el meta empieza a estabilizarse. Los datos son confiables y los builds reflejan estrategias que funcionan en juego competitivo real." },
+    emissary:  { title: "Datos de Emisario",                                body: "Emisario tiene datos solidos. Los jugadores aqui tienen buen dominio del juego y los builds son muy confiables para mejorar." },
+    archon:    { title: "Datos de Archon - Alta confiabilidad",             body: "Archon tiene excelentes datos y es donde el meta competitivo verdadero comienza. Los builds y estadisticas aqui son muy confiables para optimizar tu juego." },
+    oracle:    { title: "Datos de Oraculo - Muy confiables",                body: "Oraculo tiene datos de alta calidad con muchas partidas registradas. Los builds estan optimizados por jugadores experimentados y son muy relevantes para el meta." },
+    phantom:   { title: "Datos de Fantasma - Estandar del meta",            body: "Fantasma es el rango estandar usado para estadisticas competitivas. Gran base de datos con jugadores habilidosos. Los builds y tasas de victoria aqui representan el meta real del juego." },
+    ascendant: { title: "Por que Ascendente tiene menos datos?",            body: "Ascendente tiene muy pocos jugadores, lo que significa una muestra estadistica pequena, tasas que pueden variar mas de lo normal, y builds altamente especializados o experimentales. Los datos son validos pero menos estables entre parches. Es lo mas cercano al juego de elite." },
+    eternus:   { title: "Por que Eternus tiene datos limitados?",           body: "Eternus es el rango mas alto del juego y muy poca gente llega aqui. La muestra es muy pequena, las estadisticas son mas volatiles, los datos pueden cambiar drasticamente con cada parche, y algunas estadisticas pueden no mostrarse por datos insuficientes. Estos son los mejores jugadores del mundo." }
+  },
+  en: {
+    all:       { title: "Why does the data combine all ranks?",            body: "When you select All Ranks, the data includes matches from unranked players up to Eternus. This makes stats less accurate for your specific level, since beginners and pros play very differently. We recommend filtering by your rank for more relevant results." },
+    obscurus:  { title: "Why is there little data for Obscurus?",          body: "Unranked players are completing their placement matches. Their stats are less reliable because they don't yet have a defined skill level and results vary a lot while the game calibrates. Finish your placement matches to appear in your rank's stats." },
+    initiate:  { title: "Why is data sparse for Initiate?",                body: "Initiate is the first official rank. Data exists but with fewer matches because players rank up quickly, stats shift a lot between patches, and builds here differ from the high-rank meta. Good for learning the game, but check higher ranks for the competitive meta." },
+    seeker:    { title: "Limited data in Seeker",                          body: "Seeker has data available but with a moderate sample. Players are learning basic mechanics, so builds reflect more experimentation than optimized meta." },
+    alchemist: { title: "Alchemist data",                                  body: "Alchemist has enough data for general stats. Players are developing their playstyle. Builds are reliable but may differ from the high-rank meta." },
+    arcanist:  { title: "Arcanist data",                                   body: "Arcanist represents intermediate players. Stats are reliable and builds reflect a more defined meta. A good source of information." },
+    ritualist: { title: "Ritualist data",                                  body: "Ritualist is where the meta starts to stabilize. Data is reliable and builds reflect strategies that work in real competitive play." },
+    emissary:  { title: "Emissary data",                                   body: "Emissary has solid data. Players here have a good grasp of the game and builds are very reliable for improving." },
+    archon:    { title: "Archon data - High reliability",                  body: "Archon has excellent data and is where the true competitive meta begins. Builds and stats here are very reliable for optimizing your play." },
+    oracle:    { title: "Oracle data - Very reliable",                     body: "Oracle has high-quality data with many recorded matches. Builds are optimized by experienced players and are very relevant to the meta." },
+    phantom:   { title: "Phantom data - Meta standard",                    body: "Phantom is the standard rank used for competitive stats. Large dataset with skilled players. Builds and win rates here represent the game's real meta." },
+    ascendant: { title: "Why does Ascendant have less data?",              body: "Ascendant has very few players, meaning a small statistical sample, rates that can vary more than usual, and highly specialized or experimental builds. The data is valid but less stable between patches. It's the closest thing to elite play." },
+    eternus:   { title: "Why is Eternus data limited?",                    body: "Eternus is the highest rank and very few people reach it. The sample is very small, stats are more volatile, data can change drastically each patch, and some stats may not show due to insufficient data. These are the best players in the world." }
+  }
+};
+
+// Regions for leaderboard
+const REGIONS = [
+  { id:'sa',   es:'Latinoamerica (SA)',   en:'South America (SA)' },
+  { id:'na',   es:'Norteamerica (NA)',    en:'North America (NA)' },
+  { id:'eu',   es:'Europa (EU)',          en:'Europe (EU)' },
+  { id:'asia', es:'Asia',                en:'Asia' },
+  { id:'oce',  es:'Oceania (OCE)',        en:'Oceania (OCE)' },
+];
+
+function t(key){ return (I18N[LANG]&&I18N[LANG][key]) || I18N.es[key] || key; }
+function tf(key, vars){ let str=t(key); if(vars){ for(const k in vars){ str=str.split('{'+k+'}').join(vars[k]); } } return str; }
+function rankMsg(rankId){ return (RANK_MSGS[LANG]&&RANK_MSGS[LANG][rankId]) || RANK_MSGS.es[rankId] || null; }
+function regionLabel(id){ const r=REGIONS.find(x=>x.id===id); return r?(r[LANG]||r.es||id):id; }
+
+// ── RANK SYSTEM ──────────────────────────────────────────────────────────────
+// min_badge values map to deadlock-api.com API parameter
+// Each rank has 3 subranks (1,2,3) except Eternus
+const RANKS = [
+  { id:'all',      label:'Todos los rangos',       badge:0,   color:'#7a7a88' },
+  { id:'obscurus', label:'Obscurus (Unranked)',      badge:0,   color:'#888892' },
+  { id:'initiate', label:'1 · Initiate',             badge:10,  color:'#a78bfa' },
+  { id:'seeker',   label:'2 · Seeker',               badge:20,  color:'#8b5cf6' },
+  { id:'alchemist',label:'3 · Alchemist',            badge:30,  color:'#7c3aed' },
+  { id:'arcanist', label:'4 · Arcanist',             badge:40,  color:'#6d28d9' },
+  { id:'ritualist',label:'5 · Ritualist',            badge:50,  color:'#2563eb' },
+  { id:'emissary', label:'6 · Emissary',             badge:60,  color:'#1d4ed8' },
+  { id:'archon',   label:'7 · Archon',               badge:70,  color:'#0ea5e9' },
+  { id:'oracle',   label:'8 · Oracle',               badge:80,  color:'#06b6d4' },
+  { id:'phantom',  label:'9 · Phantom',              badge:90,  color:'#10b981' },
+  { id:'ascendant',label:'10 · Ascendant',           badge:100, color:'#f59e0b' },
+  { id:'eternus',  label:'11 · Eternus',             badge:116, color:'#fa4454' },
+];
+// Default rank filter — Phantom 1+ matches current data
+const DEFAULT_RANK = 'phantom';
+
+function getRank(){ return appData.selectedRank || DEFAULT_RANK; }
+function getRankBadge(){ const r=RANKS.find(x=>x.id===getRank()); return r?r.badge:90; }
+function getRankLabel(){ const r=RANKS.find(x=>x.id===getRank()); return r?r.label:'Phantom 1+'; }
+function getRankColor(){ const r=RANKS.find(x=>x.id===getRank()); return r?r.color:'#10b981'; }
+
+function hColor(id){let h=0;for(let i=0;i<id.length;i++)h=(h*31+id.charCodeAt(i))&0xffff;return COLORS[h%COLORS.length];}
+function imgP(id){const n=HI[id];return n?IMG_P+n+'_vertical.webp':'';}
+function imgErr(el){
+  const tried=el.getAttribute('data-tried')||'';
+  const fb=el.getAttribute('data-fb')||el.alt.slice(0,2).toUpperCase()||'?';
+  const id=el.getAttribute('data-id')||'';
+  if(!tried&&id&&HI[id]){el.setAttribute('data-tried','1');el.src=IMG_S+HI[id]+'_sm.webp';return;}
+  const large=el.getAttribute('data-large');
+  const c=id?hColor(id):'#555';
+  el.parentNode.innerHTML='<div style="width:100%;height:100%;border-radius:'+(large?'0':'50%')+';background:'+c+';display:flex;align-items:center;justify-content:center;font-size:'+(large?'26px':'12px')+';font-weight:800;color:rgba(255,255,255,.9)">'+fb+'</div>';
+}
+function hImg(id,init,large){
+  const src=imgP(id);const c=hColor(id);
+  return '<div style="width:100%;height:100%;background:'+c+'">'+(src?'<img src="'+src+'" data-id="'+id+'" data-fb="'+init+'"'+(large?' data-large="1"':'')+' onerror="imgErr(this)" style="width:100%;height:100%;object-fit:cover;object-position:top">':'<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:'+(large?'26px':'12px')+';font-weight:800;color:rgba(255,255,255,.9)">'+init+'</div>')+'</div>';
+}
+
+// ── DATA MODEL ────────────────────────────────────────────────────────────────
+// Single store: { patch, updatedAt, heroes[], heroData:{ id: { build, items, abilities } } }
+
+const DEFAULT_HEROES=[
+  {id:"graves",name:"Graves",wr:.593,pick:.032,tier:"S",added:"2026-01-29",patched:"2026-05-22"},
+  {id:"seven",name:"Seven",wr:.56,pick:.038,tier:"S",added:"2024-09-01",patched:"2026-05-22"},
+  {id:"mcginnis",name:"McGinnis",wr:.56,pick:.019,tier:"S",added:"2024-09-01",patched:"2026-05-22"},
+  {id:"victor",name:"Victor",wr:.55,pick:.034,tier:"S",added:"2025-08-01",patched:"2026-05-22"},
+  {id:"dynamo",name:"Dynamo",wr:.541,pick:.032,tier:"A",added:"2024-09-01",patched:"2026-04-30"},
+  {id:"kelvin",name:"Kelvin",wr:.542,pick:.019,tier:"A",added:"2024-09-01",patched:"2026-05-22"},
+  {id:"haze",name:"Haze",wr:.530,pick:.039,tier:"A",added:"2024-09-01",patched:"2026-04-30"},
+  {id:"the-doorman",name:"The Doorman",wr:.527,pick:.026,tier:"A",added:"2026-01-29",patched:"2026-05-22"},
+  {id:"ivy",name:"Ivy",wr:.525,pick:.023,tier:"A",added:"2024-09-01",patched:"2026-05-22"},
+  {id:"warden",name:"Warden",wr:.521,pick:.029,tier:"A",added:"2024-09-01",patched:"2026-05-22"},
+  {id:"lady-geist",name:"Lady Geist",wr:.518,pick:.026,tier:"A",added:"2024-09-01",patched:"2026-05-22"},
+  {id:"mo-and-krill",name:"Mo & Krill",wr:.509,pick:.021,tier:"A",added:"2024-09-01",patched:"2026-04-30"},
+  {id:"drifter",name:"Drifter",wr:.507,pick:.034,tier:"A",added:"2025-08-01",patched:"2026-04-30"},
+  {id:"paige",name:"Paige",wr:.507,pick:.026,tier:"A",added:"2025-08-01",patched:"2026-04-30"},
+  {id:"yamato",name:"Yamato",wr:.506,pick:.025,tier:"A",added:"2024-09-01",patched:"2026-04-30"},
+  {id:"lash",name:"Lash",wr:.503,pick:.034,tier:"A",added:"2024-09-01",patched:"2026-04-30"},
+  {id:"abrams",name:"Abrams",wr:.503,pick:.022,tier:"A",added:"2024-09-01",patched:"2026-04-30"},
+  {id:"apollo",name:"Apollo",wr:.501,pick:.027,tier:"A",added:"2026-01-29",patched:"2026-05-22"},
+  {id:"mina",name:"Mina",wr:.494,pick:.044,tier:"B",added:"2025-08-01",patched:"2026-05-22"},
+  {id:"calico",name:"Calico",wr:.500,pick:.015,tier:"B",added:"2025-08-01",patched:"2026-04-30"},
+  {id:"pocket",name:"Pocket",wr:.487,pick:.022,tier:"B",added:"2024-09-01",patched:"2026-04-30"},
+  {id:"vyper",name:"Vyper",wr:.487,pick:.015,tier:"B",added:"2025-08-01",patched:"2026-05-22"},
+  {id:"grey-talon",name:"Grey Talon",wr:.486,pick:.019,tier:"B",added:"2024-09-01",patched:"2026-05-22"},
+  {id:"wraith",name:"Wraith",wr:.485,pick:.029,tier:"B",added:"2024-09-01",patched:"2026-04-30"},
+  {id:"vindicta",name:"Vindicta",wr:.485,pick:.022,tier:"B",added:"2024-09-01",patched:"2026-04-30"},
+  {id:"celeste",name:"Celeste",wr:.484,pick:.029,tier:"B",added:"2026-01-29",patched:"2026-05-22"},
+  {id:"infernus",name:"Infernus",wr:.483,pick:.031,tier:"B",added:"2024-09-01",patched:"2026-04-30"},
+  {id:"billy",name:"Billy",wr:.482,pick:.026,tier:"B",added:"2025-08-01",patched:"2026-04-30"},
+  {id:"paradox",name:"Paradox",wr:.482,pick:.023,tier:"B",added:"2024-09-01",patched:"2026-04-30"},
+  {id:"silver",name:"Silver",wr:.481,pick:.031,tier:"B",added:"2026-01-29",patched:"2026-05-22"},
+  {id:"shiv",name:"Shiv",wr:.468,pick:.029,tier:"B",added:"2024-09-01",patched:"2026-05-22"},
+  {id:"bebop",name:"Bebop",wr:.454,pick:.035,tier:"B",added:"2024-09-01",patched:"2026-04-30"},
+  {id:"mirage",name:"Mirage",wr:.479,pick:.019,tier:"C",added:"2025-08-01",patched:"2026-04-30"},
+  {id:"holliday",name:"Holliday",wr:.469,pick:.016,tier:"C",added:"2025-08-01",patched:"2026-04-30"},
+  {id:"viscous",name:"Viscous",wr:.468,pick:.015,tier:"C",added:"2024-09-01",patched:"2026-04-30"},
+  {id:"sinclair",name:"Sinclair",wr:.458,pick:.016,tier:"C",added:"2025-08-01",patched:"2026-04-30"},
+  {id:"rem",name:"Rem",wr:.456,pick:.030,tier:"C",added:"2026-01-29",patched:"2026-05-22"},
+  {id:"venator",name:"Venator",wr:.434,pick:.032,tier:"C",added:"2025-08-01",patched:"2026-04-30"},
+];
+
+// Graves default full data
+const GRAVES_DEFAULT_BUILD={patch:"2026-05-22",source:"farmingbip · deadlock.coach",sourceUrl:"https://deadlock.coach/en/heroes/graves/builds",
+  early:[{t:1,n:"Restorative Shot",note:"Main lane sustain"},{t:1,n:"Extra Stamina",note:"Movement / boxes"},{t:2,n:"Arcane Surge",note:"Put on skulls always"},{t:2,n:"Mystic Shot",note:"Great dmg"},{t:2,n:"Improved Spirit",note:"Into Boundless"},{t:3,n:"Rapid Recharge",note:"Stockpile skulls"},{t:3,n:"Heroic Aura",note:"⚡ Power spike"},{t:3,n:"Spirit Resilience",note:"Tank item"}],
+  core:[{t:4,n:"Echo Shard ⭐",note:"Buy ASAP — one shots w/ Heroic"},{t:2,n:"Spirit Lifesteal",note:"Into Spiritual"},{t:4,n:"Spiritual Overflow",note:"Heal a lot"},{t:4,n:"Boundless Spirit",note:"Skulls do tons of dmg"},{t:4,n:"Escalating Exposure",note:"OR Boundless"},{t:2,n:"Kinetic Dash",note:"Proc Overflow"}],
+  late:[{t:4,n:"Transcendent CD",note:"Default buy"},{t:4,n:"Siphon Bullets",note:"Strong this patch"},{t:4,n:"Spirit Burn",note:"Meta testing"},{t:4,n:"Refresher",note:"Double ult"},{t:4,n:"Unstoppable",note:"Late vs CC"},{t:3,n:"Tankbuster",note:"Procs on burn"}],
+  abilityOrder:"1,3,2,R,1,3,1,R,R,R,R,3,3,2,2,2",openerNote:"1 → 1 → 3 wins 67.9% of games (9,662 tracked)"};
+
+const GRAVES_DEFAULT_ITEMS=[
+  {name:"Restorative Shot",tier:1,wr:.522,pick:.847},{name:"Extra Stamina",tier:1,wr:.518,pick:.787},
+  {name:"Spirit Lifesteal",tier:2,wr:.531,pick:.611},{name:"Toxic Bullets",tier:3,wr:.531,pick:.688},
+  {name:"Stamina Mastery",tier:3,wr:.525,pick:.653},{name:"Extra Spirit",tier:1,wr:.513,pick:.491},
+  {name:"Leech",tier:4,wr:.568,pick:.535},{name:"Ricochet",tier:4,wr:.553,pick:.457},
+  {name:"Improved Spirit",tier:2,wr:.519,pick:.449},{name:"Quicksilver Reload",tier:2,wr:.522,pick:.432},
+  {name:"Split Shot",tier:2,wr:.518,pick:.395},{name:"Tesla Bullets",tier:3,wr:.518,pick:.387},
+  {name:"Mystic Vulnerability",tier:2,wr:.537,pick:.344},{name:"Recharging Rush",tier:2,wr:.525,pick:.338},
+  {name:"Superior Duration",tier:3,wr:.551,pick:.335},{name:"Surge of Power",tier:3,wr:.521,pick:.333},
+  {name:"Escalating Exposure",tier:4,wr:.588,pick:.326},{name:"Boundless Spirit",tier:4,wr:.556,pick:.318},
+  {name:"Bullet Lifesteal",tier:2,wr:.551,pick:.309},{name:"Duration Extender",tier:2,wr:.558,pick:.273},
+  {name:"Inhibitor",tier:4,wr:.588,pick:.236},{name:"Heroic Aura",tier:3,wr:.552,pick:.201},
+  {name:"Silencer",tier:4,wr:.614,pick:.178},{name:"Mercurial Magnum",tier:4,wr:.571,pick:.173},
+  {name:"Transcendent Cooldown",tier:4,wr:.557,pick:.137},{name:"Echo Shard",tier:4,wr:.595,pick:.124},
+  {name:"Superior Cooldown",tier:3,wr:.547,pick:.124},{name:"Rapid Rounds",tier:1,wr:.544,pick:.126},
+  {name:"Siphon Bullets",tier:4,wr:.593,pick:.064},{name:"Spiritual Overflow",tier:4,wr:.616,pick:.047},
+  {name:"Spirit Burn",tier:4,wr:.586,pick:.047},{name:"Burst Fire",tier:3,wr:.563,pick:.046},
+  {name:"Mystic Slow",tier:2,wr:.552,pick:.038},{name:"Lightning Scroll",tier:4,wr:.600,pick:.029},
+  {name:"Juggernaut",tier:4,wr:.608,pick:.027},{name:"Unstoppable",tier:4,wr:.577,pick:.012},
+  {name:"Spellslinger",tier:4,wr:.714,pick:.008},{name:"Decay",tier:3,wr:.614,pick:.006},
+].map(i=>({...i,wp:+(i.pick*i.wr).toFixed(4)}));
+
+const GRAVES_DEFAULT_ABS=[
+  {slot:1,name:"Jar of Dead",desc:"Throw a jar summoning Deadheads that deal spirit damage. Passive: collect death from nearby kills.",wr:.54,matches:"124K"},
+  {slot:2,name:"Grasping Hands",desc:"Unearth a line of hands dealing spirit damage and immobilizing enemies.",wr:.49,matches:"1.4K"},
+  {slot:3,name:"Essence Theft",desc:"Passive: weapon shots steal stats from enemies, reducing their damage.",wr:.50,matches:"41K"},
+  {slot:4,name:"Borrowed Decree",desc:"Summon a gravestone calling forth undead minions to overwhelm and split push.",wr:.52,matches:"75K"},
+];
+
+// ── APP STATE ─────────────────────────────────────────────────────────────────
+let appData={patch:'2026-05-22',updatedAt:null,heroes:[],heroData:{}};
+let selected=null,winsOpen=false,activeTab='build',sortCol='picks',sortDir=-1;
+
+function toId(n){return n.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');}
+function toTier(w){if(w>=.55)return'S';if(w>=.52)return'A';if(w>=.49)return'B';if(w>=.46)return'C';return'D';}
+function daysSince(d){return Math.floor((Date.now()-new Date(d))/(864e5));}
+function hoursSince(d){return Math.floor((Date.now()-new Date(d))/36e5);}
+
+function heroStatus(h){
+  const hd=appData.heroData[h.id]||{};
+  if(hd.build&&hd.build.early&&hd.build.early.length) return 'full';
+  if(h.wr>0) return daysSince(h.added)<30?'new':'basic';
+  return 'empty';
+}
+
+function loadApp(){
+  try{
+    const s=JSON.parse(localStorage.getItem(STORE)||'null');
+    if(s&&s.heroes&&s.heroes.length){appData=s;return;}
+  }catch(e){}
+  // First load: set defaults
+  appData={patch:'2026-05-22',updatedAt:null,
+    heroes:JSON.parse(JSON.stringify(DEFAULT_HEROES)),
+    heroData:{graves:{build:JSON.parse(JSON.stringify(GRAVES_DEFAULT_BUILD)),items:JSON.parse(JSON.stringify(GRAVES_DEFAULT_ITEMS)),abilities:JSON.parse(JSON.stringify(GRAVES_DEFAULT_ABS))}}
+  };
+}
+function saveApp(){
+  try{localStorage.setItem(STORE,JSON.stringify(appData));}catch(e){console.warn('localStorage full',e);}
+}
+
+// ── SIDEBAR ───────────────────────────────────────────────────────────────────
+function filterSB(){renderSB(document.getElementById('heroSearch').value.toLowerCase());}
+function renderSB(q=''){
+  const lu=appData.updatedAt;
+  document.getElementById('patchLabel').textContent='Patch '+appData.patch;
+  document.getElementById('lastUpLabel').innerHTML=lu?t('updatedColon')+'<strong style="color:var(--green)">'+lu+'</strong>':('<span style="color:var(--amber)">'+t('pressUpdateShort')+'</span>');
+  document.getElementById('sbList').innerHTML=appData.heroes
+    .filter(h=>!q||h.name.toLowerCase().includes(q))
+    .map(h=>{
+      const init=h.name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+      const st=heroStatus(h);
+      const wrStr=h.wr?(h.wr*100).toFixed(1)+'%':'—';
+      const prStr=h.pick?(h.pick*100).toFixed(1)+'%':'';
+      return '<div class="hi'+(h.id===selected?' active':'')+'" onclick="pick(\''+h.id+'\')">'
+        +'<div class="hi-img">'+hImg(h.id,init,false)+'</div>'
+        +'<div class="hi-body">'
+        +'<div class="hi-name">'+h.name+'</div>'
+        +'<div class="hi-meta"><span class="pip pip-'+st+'"></span>'
+        +'<span style="color:var(--green)">'+wrStr+'</span>'
+        +(prStr?'<span style="color:var(--hint)">·</span><span>'+prStr+'</span>':'')
+        +'</div></div></div>';
+    }).join('');
+}
+function pick(id){selected=id;winsOpen=false;activeTab='build';renderSB(document.getElementById('heroSearch').value.toLowerCase());renderMain();}
+
+// ── HOME ──────────────────────────────────────────────────────────────────────
+function renderHome(){
+  const tiers=['S','A','B','C','D'];
+  const tColor={S:'tl-S',A:'tl-A',B:'tl-B',C:'tl-C',D:'tl-D'};
+  const wrColor={S:'var(--amber)',A:'var(--green)',B:'var(--blue)',C:'var(--red)',D:'var(--muted)'};
+  const lu=appData.updatedAt;
+  let html='<div class="home-hdr"><h2>'+t('heroRoster')+'</h2><p>'+appData.heroes.length+' '+t('heroCount')+' · '+t('patchLabel')+' '+appData.patch+' · '+(lu?'<span style="color:var(--green)">'+t('homeLivePrefix')+lu+'</span>':'<span style="color:var(--amber)">'+t('homePressUpdate')+'</span>')+'</p></div>';
+  tiers.forEach(t=>{
+    const g=appData.heroes.filter(h=>h.tier===t); if(!g.length)return;
+    html+='<div class="tier-group"><div class="tier-lbl '+tColor[t]+'">'+t+' TIER <span style="color:var(--hint);font-weight:400">'+g.length+' heroes</span><span style="margin-left:auto;font-size:9px;color:var(--hint)">WR / PR</span></div><div class="tier-grid">';
+    g.forEach(h=>{
+      const init=h.name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+      const st=heroStatus(h);
+      const hd=appData.heroData[h.id]||{};
+      const hasFull=hd.build&&hd.build.early&&hd.build.early.length;
+      const pipBg={full:'var(--green)',basic:'var(--blue)',new:'var(--amber)',empty:'var(--hint)'}[st]||'var(--hint)';
+      const isNew=h.patched===appData.patch;
+      html+='<div class="hcard" onclick="pick(\''+h.id+'\')">';
+      if(hasFull) html+='<div class="hcard-tag tag-full">DATA</div>';
+      else if(isNew) html+='<div class="hcard-tag tag-new">NEW</div>';
+      html+='<div class="hcard-pip" style="background:'+pipBg+'"></div>';
+      html+='<div class="hcard-img">'+hImg(h.id,init,false)+'</div>';
+      html+='<div class="hcard-body"><div class="hcard-name">'+h.name+'</div>';
+      html+='<div class="hcard-stats"><span class="hcard-wr" style="color:'+wrColor[t]+'">'+(h.wr?(h.wr*100).toFixed(1)+'%':'—')+'</span><span class="hcard-pr">'+(h.pick?(h.pick*100).toFixed(1)+'%':'')+'</span></div>';
+      html+='</div></div>';
+    });
+    html+='</div></div>';
+  });
+  document.getElementById('mainContent').innerHTML=html;
+}
+
+// ── HERO HEADER ───────────────────────────────────────────────────────────────
+function heroHdr(h){
+  const init=h.name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+  const st=heroStatus(h);
+  const tc={'S':'tb-S','A':'tb-A','B':'tb-B','C':'tb-C','D':'tb-D'}[h.tier]||'tb-D';
+  const sc={'full':'sb-full','basic':'sb-basic','new':'sb-new','empty':'sb-empty'}[st]||'sb-empty';
+  const sl={'full':t('fullData'),'basic':t('basicStats'),'new':t('newHero'),'empty':t('noData')}[st]||st;
+  const lu=appData.updatedAt;
+  const freshTag=lu?('<span class="live-tag">'+t('liveTagPrefix')+lu+'</span>'):('<span class="stale-tag">'+t('pressUpdateStale')+'</span>');
+  const wrColor=h.wr>=.52?'var(--green)':h.wr<.48?'var(--red)':'var(--text)';
+  return '<div class="hero-hdr">'
+    +'<div class="hh-port">'+hImg(h.id,init,true)+'</div>'
+    +'<div class="hh-info">'
+    +'<h2>'+h.name+'</h2>'
+    +'<div class="hh-badges">'
+    +'<span class="tbadge '+tc+'">'+h.tier+' Tier</span>'
+    +'<span class="sbadge '+sc+'">'+sl+'</span>'
+    +freshTag
+    +'</div>'
+    +'<div class="hh-stats">'
+    +'<div class="stat-box" title="Win Rate — updated by Refresh Update"><div class="stat-val" style="color:'+wrColor+'">'+(h.wr?(h.wr*100).toFixed(1)+'%':'—')+'</div><div class="stat-lbl">Win Rate</div></div>'
+    +'<div class="stat-box" title="Pick Rate — updated by Refresh Update"><div class="stat-val">'+(h.pick?(h.pick*100).toFixed(1)+'%':'—')+'</div><div class="stat-lbl">Pick Rate</div></div>'
+    +'<div class="stat-box"><div class="stat-val" style="color:var(--amber)">'+h.tier+'</div><div class="stat-lbl">Tier</div></div>'
+    +'<div class="stat-box"><div class="stat-val" style="font-size:11px;color:var(--muted)">'+(h.patched||'—')+'</div><div class="stat-lbl">As of</div></div>'
+    +'<div class="stat-box" title="Current rank filter"><div class="stat-val" style="font-size:10px;color:'+getRankColor()+'"><span class="rank-dot" style="background:'+getRankColor()+'"></span>'+getRankLabel()+'</div><div class="stat-lbl">Rank filter</div></div>'
+    +'</div></div></div>';
+}
+
+// ── MAIN ──────────────────────────────────────────────────────────────────────
+function renderMain(){
+  if(currentNav==='lb')    { renderLeaderboard(); return; }
+  if(currentNav==='patch') { renderPatchNotes();  return; }
+  if(currentNav==='map')   { renderMapData();     return; }
+  if(currentNav==='logs')  { renderLogs();       return; }
+  if(!selected){renderHome();return;}
+  const h=appData.heroes.find(x=>x.id===selected);
+  if(!h){renderHome();return;}
+  const st=heroStatus(h);
+  const hd=appData.heroData[h.id]||{};
+  if(st==='full'||hd.build) renderFull(h,hd);
+  else if(st==='empty') renderEmpty(h);
+  else renderBasic(h);
+}
+
+function renderBasic(h){
+  const hrs=hoursSince(appData.patch);
+  let b='';
+  if(hrs<72) b+=bnr('warn','⏳',tf('patchOldTitle',{p:appData.patch,n:hrs}),tf('patchOldBody',{n:Math.max(0,72-hrs)}));
+  b+=bnr('info','Refresh',tf('fetchBuildTitle',{h:h.name}),t('fetchBuildBody'));
+  document.getElementById('mainContent').innerHTML=heroHdr(h)+b
+    +'<div class="nodata"><div class="nd-icon">📊</div><h3>Build data not yet loaded for '+h.name+'</h3>'
+    +('<p>'+tf('buildNotLoadedBody',{h:h.name})+'</p>')
+    +'<div class="extlinks">'
+    +'<a class="extlink" href="https://deadlock-api.com/heroes/" target="_blank">deadlock-api.com →</a>'
+    +'<a class="extlink" href="https://deadlocklabs.gg/heroes/'+h.id+'/" target="_blank">deadlocklabs →</a>'
+    +'</div></div>';
+}
+function renderEmpty(h){
+  document.getElementById('mainContent').innerHTML=heroHdr(h)
+    +'<div class="nodata"><div class="nd-icon">🔮</div><h3>'+t('noDataForHero')+h.name+'</h3>'
+    +('<p>'+t('noDataForHeroBody')+'</p>')
+    +'<div class="extlinks"><a class="extlink" href="https://deadlock-api.com/heroes" target="_blank">deadlock-api.com →</a></div></div>';
+}
+
+function renderFull(h,hd){
+  const tabs='<div class="tabs">'
+    +'<div class="tab'+(activeTab==='build'?' active':'')+'" onclick="setTab(\'build\')">Build Actual</div>'
+    +'<div class="tab'+(activeTab==='items'?' active':'')+'" onclick="setTab(\'items\')">'+t('itemStats')+'</div>'
+    +'<div class="tab'+(activeTab==='abilities'?' active':'')+'" onclick="setTab(\'abilities\')">'+t('abilities')+'</div>'
+    +'<div class="tab'+(activeTab==='matchups'?' active':'')+'" onclick="setTab(\'matchups\')">Counters y Sinergias</div>'
+    +'<div class="tab-right">'+(appData.updatedAt?('<span class="live-tag">'+t('liveTagPrefix')+appData.updatedAt+'</span>'):('<span class="stale-tag">'+t('pressUpdateStale')+'</span>'))+'</div>'
+    +'</div>';
+  document.getElementById('mainContent').innerHTML=heroHdr(h)+tabs+'<div id="tabBody"></div>';
+  renderTab(h,hd);
+}
+function setTab(t){activeTab=t;const h=appData.heroes.find(x=>x.id===selected);const hd=appData.heroData[selected]||{};renderTab(h,hd);}
+
+function renderTab(h,hd){
+  const el=document.getElementById('tabBody');if(!el)return;
+  if(activeTab==='build') el.innerHTML=buildTab(h,hd);
+  else if(activeTab==='items'){el.innerHTML=itemsTab(h,hd);attachItemEvents(hd);}
+  else if(activeTab==='matchups') el.innerHTML=matchupsTab(h,hd);
+  else el.innerHTML=abTab(h,hd);
+}
+
+function bnr(t,ic,title,body){return '<div class="banner b'+t+'"><div class="bi">'+ic+'</div><div class="bt"><strong>'+title+'</strong>'+body+'</div></div>';}
+
+function buildTab(h,hd){
+  const b=hd.build||{};
+  const isStale=b.patch&&new Date(b.patch)<new Date(appData.patch);
+  const bitem=(t,n,note)=>'<div class="bitem"><span class="btt btt'+t+'">T'+t+'</span><div><div class="bname">'+n+'</div><div class="bnote">'+note+'</div></div></div>';
+  let html='<div class="ppatch">';
+  html+='<div class="pp-hdr"><h3>'+t('popularBuild')+'</h3>'+(isStale?('<span class="stale-b">'+t('prePatchUpdate')+'</span>'):'<span class="new-b">'+(b.patch||appData.patch)+'</span>')+'</div>';
+  html+='<div class="pp-meta">'+(b.source||'')+(b.sourceUrl?' · <a href="'+b.sourceUrl+'" target="_blank">Ver →</a>':'')+'</div>';
+  html+='<div class="bcols">';
+  // Handle both formats:
+  // New: [{label:"Early Game 500 Souls", items:[{t,nameEn,nameEs,note,image}]}]
+  // Old: [{t,n,note}]
+  function flattenSection(arr){
+    if(!arr||!arr.length) return [];
+    const first = arr[0];
+    // New format: has .items array OR has .label
+    if(first && (Array.isArray(first.items) || first.label)){
+      return arr.flatMap(sec=>Array.isArray(sec.items)?sec.items:[]);
+    }
+    // Old format: direct item array
+    return arr;
+  }
+  const flatEarly = flattenSection(b.early||[]);
+  const flatCore  = flattenSection(b.core||[]);
+  const flatLate  = flattenSection(b.late||[]);
+  const pickN = i => (LANG==='en' ? (i.nameEn||i.nameEs) : (i.nameEs||i.nameEn)) || i.n || i.name || '?';
+  const pickT = i => i.t||i.tier||1;
+  html+='<div class="bcol"><div class="bcol-t bct-e">'+('Inicio')+'</div>'+flatEarly.map(i=>bitem(pickT(i),pickN(i),i.note||'')).join('')+'</div>';
+  html+='<div class="bcol"><div class="bcol-t bct-c">Core</div>'+flatCore.map(i=>bitem(pickT(i),pickN(i),i.note||'')).join('')+'</div>';
+  html+='<div class="bcol"><div class="bcol-t bct-l">'+('Final')+'</div>'+flatLate.map(i=>bitem(pickT(i),pickN(i),i.note||'')).join('')+'</div>';
+  html+='</div></div>';
+  if(b.openerNote) html+=bnr('success','🏆',b.openerNote,'');
+  html+='<div class="src">'+t('srcPrefix')+(b.source||'—')+t('srcUpdated')+(b.patch||'—')+'</div>';
+  return html;
+}
+
+function matchupsTab(h,hd){
+  const c = hd.counters || null;
+  const s = hd.synergies || null;
+  const pct = x => (x*100).toFixed(1)+'%';
+  const wcls = wr => wr>=.55?'chi':wr<.48?'clo':'cmd';
+
+  if((!c || (!c.strong?.length && !c.weak?.length)) && (!s || !s.best?.length)){
+    return bnr('warn','⚔️',t('countersNoData'),
+      tf('countersNoDataBody',{h:h.name}));
+  }
+
+  const rowList = (arr, key, valLabel) => arr.map(x=>
+    '<div class="mu-row"><span class="mu-name">'+(x[key]||'?')+'</span>'
+    +'<div class="br"><div class="bb"><div class="bf '+(wr=>wr>=.55?'bhi':wr<.48?'blo':'bmd')(x.wr)+'" style="width:'+Math.round(x.wr*100)+'%"></div></div>'
+    +'<span class="sn '+wcls(x.wr)+'">'+pct(x.wr)+'</span></div>'
+    +'<span class="mu-m">'+(x.matches||0).toLocaleString()+' partidas</span></div>'
+  ).join('');
+
+  let html = bnr('warn','⚔️',tf('countersTitle',{p:appData.patch}), tf('countersBody',{h:h.name}));
+
+  html += '<div class="mu-grid">';
+
+  // Le ganas (mejores counters)
+  if(c && c.strong?.length){
+    html += '<div class="mu-card"><div class="mu-hdr mu-good">✅ Le ganas a</div>'
+      + rowList(c.strong, 'enemyName') + '</div>';
+  }
+  // Te ganan (peores)
+  if(c && c.weak?.length){
+    html += '<div class="mu-card"><div class="mu-hdr mu-bad">⚠️ Te ganan</div>'
+      + rowList(c.weak, 'enemyName') + '</div>';
+  }
+  // Mejores dúos
+  if(s && s.best?.length){
+    html += '<div class="mu-card"><div class="mu-hdr mu-ally">'+t('bestDuosHdr')+'</div>'
+      + rowList(s.best, 'allyName') + '</div>';
+  }
+
+  html += '</div>';
+  html += '<div class="src">'+t('countersSource')+'</div>';
+  return html;
+}
+
+function itemsTab(h,hd){
+  const items=(hd.items||[]).map(i=>({...i,wp:+(i.pick*i.wr).toFixed(4)}));
+  if(!items.length) return bnr('info','📊',t('itemsNotLoaded'),tf('itemsNotLoadedBody',{h:h.name}));
+  return '<div class="wp" id="wp">'
+    +'<div class="wp-hdr">'+t('mostUsedWins')+'</div>'
+    +'<div class="wp-sub">'+('Top 5 por tier · puntaje = sel × vic · fuente: ')+appData.updatedAt+'</div>'
+    +'<div class="lanes" id="wl"></div></div>'
+    +'<div class="toolbar">'
+    +'<button class="btn'+(winsOpen?' active':'')+'" id="wb" onclick="toggleW()"><span class="dot"></span>'+t('winsBuild')+'</button>'
+    +'<label>'+t('sortBtn')+'</label><select id="ss"><option value="picks">'+t('pickRate')+' ↓</option><option value="wr">'+t('winRate')+' ↓</option><option value="wp">'+t('winsScore')+' ↓</option></select>'
+    +'<label>Tier</label><select id="ts"><option value="0">All</option><option value="1">T1</option><option value="2">T2</option><option value="3">T3</option><option value="4">T4</option></select>'
+    +'<div class="sw"><input id="is" placeholder="Search…"></div>'
+    +'<div class="spacer"></div><span id="ic" style="font-size:10px;color:var(--muted)"></span>'
+    +'</div>'
+    +'<table><thead><tr>'
+    +'<th style="width:35%" data-col="name">'+t('item')+'</th><th style="width:8%" data-col="tier">'+t('tier')+'</th>'
+    +'<th style="width:22%" data-col="picks">'+t('pickRateCol')+'</th><th style="width:22%" data-col="wr">'+t('winRateCol')+'</th>'
+    +'<th style="width:13%" data-col="wp" title="Pick × WR">'+('Puntaje ↕')+'</th>'
+    +'</tr></thead><tbody id="tb"></tbody></table>'
+    +'<div class="src" id="itSrc">Source: metabot.gg (deadlock-api.com) · Updated: '+(appData.updatedAt||'—')+'</div>';
+}
+
+function attachItemEvents(hd){
+  const items=(hd.items||[]).map(i=>({...i,wp:+(i.pick*i.wr).toFixed(4)}));
+  const topWP=new Set([...items].sort((a,b)=>b.wp-a.wp).slice(0,12).map(i=>i.name));
+  function renderItems(){
+    const tier=parseInt((document.getElementById('ts')||{value:'0'}).value);
+    const q=((document.getElementById('is')||{value:''}).value||'').toLowerCase();
+    const iN = i => ((LANG==='en' ? (i.nameEn||i.nameEs) : (i.nameEs||i.nameEn)) || i.name || '');
+    let rows=items.filter(i=>(!tier||i.tier===tier)&&(!q||iN(i).toLowerCase().includes(q)));
+    rows.sort((a,b)=>{
+      if(sortCol==='name')return sortDir*(iN(a)<iN(b)?-1:1);
+      const k={wr:'wr',picks:'pick',tier:'tier',wp:'wp'}[sortCol];
+      return sortDir*(b[k]-a[k]);
+    });
+    const maxP=Math.max(...items.map(i=>i.pick),0.01);
+    const tb=document.getElementById('tb');if(!tb)return;
+    tb.innerHTML='';
+    rows.forEach(i=>{
+      const tcls=['','t1b','t2b','t3b','t4b'][i.tier]||'';
+      const wcls=i.wr>=.55?'chi':i.wr<.48?'clo':'cmd';
+      const bcls=i.wr>=.55?'bhi':i.wr<.48?'blo':'bmd';
+      const isTop=topWP.has(i.nameEn||i.name||'');
+      const tr=document.createElement('tr');if(isTop)tr.classList.add('hl');
+      tr.innerHTML='<td class="iname">'+iN(i)+(i.pick>=.6?'<span class="hot"></span>':'')+'</td>'
+        +'<td><span class="tt '+tcls+'">T'+i.tier+'</span></td>'
+        +'<td><div class="br"><div class="bb"><div class="bf bp" style="width:'+Math.round(i.pick/maxP*100)+'%"></div></div><span class="sn cmd">'+(i.pick*100).toFixed(1)+'%</span></div></td>'
+        +'<td><div class="br"><div class="bb"><div class="bf '+bcls+'" style="width:'+Math.round(i.wr*100)+'%"></div></div><span class="sn '+wcls+'">'+(i.wr*100).toFixed(1)+'%</span></div></td>'
+        +'<td style="font-size:10px;color:var(--green);font-weight:600;text-align:right">'+(i.wp*100).toFixed(1)+'%</td>';
+      tb.appendChild(tr);
+    });
+    const ic=document.getElementById('ic');if(ic)ic.textContent=rows.length+'/'+items.length;
+  }
+  document.querySelectorAll('thead th[data-col]').forEach(th=>{
+    th.addEventListener('click',()=>{
+      sortCol===th.dataset.col?sortDir*=-1:(sortCol=th.dataset.col,sortDir=-1);
+      document.querySelectorAll('thead th').forEach(x=>x.classList.remove('active'));
+      th.classList.add('active');
+      document.getElementById('ss').value=sortCol;
+      renderItems();
+    });
+  });
+  document.getElementById('ss').addEventListener('change',e=>{sortCol=e.target.value;sortDir=-1;renderItems();});
+  document.getElementById('ts').addEventListener('change',renderItems);
+  document.getElementById('is').addEventListener('input',renderItems);
+  function toggleW(){
+    winsOpen=!winsOpen;
+    const wp=document.getElementById('wp');if(wp)wp.style.display=winsOpen?'block':'none';
+    const wb=document.getElementById('wb');if(wb)wb.classList.toggle('active',winsOpen);
+    if(winsOpen){
+      const names=['T1 — Early','T2 — Mid-early','T3 — Mid','T4 — Late'],cls=['lt1c','lt2c','lt3c','lt4c'];
+      const wl=document.getElementById('wl');if(!wl)return;
+      wl.innerHTML=[1,2,3,4].map((t,i)=>{
+        const tItems=[...items].filter(x=>x.tier===t).sort((a,b)=>b.wp-a.wp).slice(0,5);
+        return'<div class="lane"><div class="lt '+cls[i]+'">'+names[i]+'</div>'+tItems.map((it,ix)=>
+          '<div class="wi"><span class="wi-r">'+(ix+1)+'</span><span class="wi-n">'+it.name+'</span><span class="wi-w">'+(it.wr*100).toFixed(1)+'%</span></div>'
+        ).join('')+'</div>';
+      }).join('');
+    }
+  }
+  window.toggleW=toggleW;
+  if(winsOpen) toggleW();
+  renderItems();
+}
+
+function abTab(h,hd){
+  const b=hd.build||{};
+  const AB=hd.abilities&&hd.abilities.length>=4?hd.abilities:[
+    {slot:1,name:"Habilidad 1",desc:"Presiona Actualizar para cargar datos de habilidades para "+h.name+".",wr:null,matches:"?"},
+    {slot:2,name:"Ability 2",desc:"",wr:null,matches:"?"},
+    {slot:3,name:"Ability 3",desc:"",wr:null,matches:"?"},
+    {slot:4,name:"Ultimate",desc:"",wr:null,matches:"?"},
+  ];
+  const seq=(b.abilityOrder||'').split(',').filter(Boolean);
+  const AC={1:'s1',2:'s2',3:'s3',R:'sR'};
+  const nums=['n1','n2','n3','nR'],labels=['Ability 1','Ability 2','Ability 3',t('ultimate')];
+  const PRIO=[{r:1,a:'1',c:'pb1',n:AB[0]&&AB[0].name||'Ability 1',w:AB[0]&&AB[0].wr?(AB[0].wr*100).toFixed(0)+'%':'?',s:t('maxFirst')},
+    {r:2,a:'3',c:'pb3',n:AB[2]&&AB[2].name||'Ability 3',w:AB[2]&&AB[2].wr?(AB[2].wr*100).toFixed(0)+'%':'?',s:t('secondPriority')},
+    {r:3,a:'R',c:'pbR',n:AB[3]&&AB[3].name||t('ultimate'),w:AB[3]&&AB[3].wr?(AB[3].wr*100).toFixed(0)+'%':'?',s:t('unlockEarlyMaxLate')},
+    {r:4,a:'2',c:'pb2',n:AB[1]&&AB[1].name||'Ability 2',w:AB[1]&&AB[1].wr?(AB[1].wr*100).toFixed(0)+'%':'?',s:t('maxLast')}];
+
+  const isLive=hd.abilities&&hd.abilities.length>=4;
+  let html=bnr('warn','⚡',tf('abilTitle',{p:appData.patch}),(isLive?t('abilLive'):tf('abilStale',{h:h.name})));
+
+  let abCards='';
+  AB.forEach((a,i)=>{
+    const wc=a.wr>=.52?'var(--green)':a.wr<.48?'var(--red)':'var(--muted)';
+    abCards+='<div class="ab-card">'
+      +'<div class="ab-num '+nums[i]+'">'+labels[i]+'</div>'
+      +'<div class="ab-name">'+(a.name||'—')+'</div>'
+      +'<div class="ab-desc">'+(a.desc||'')+'</div>'
+      +'<div class="ab-wr" style="color:'+wc+'">'+(a.wr?(a.wr*100).toFixed(0)+'%':'—')+' WR · '+(a.matches||'?')+' games</div>'
+      +'</div>';
+  });
+  html+='<div class="ab-grid">'+abCards+'</div>';
+  if(b.openerNote) html+=bnr('success','🏆',b.openerNote,'');
+  if(seq.length){
+    html+='<div class="sec-t" style="margin-top:4px">'+t('levelPriority')+'</div>';
+    html+='<div class="pri-grid">'+PRIO.map(p=>'<div class="pri-card"><div class="pri-rank">#'+p.r+'</div><div class="pri-badge '+p.c+'">'+p.a+'</div><div><div class="pri-nm">'+p.n+'</div><div class="pri-sub">'+p.w+' WR · '+p.s+'</div></div></div>').join('')+'</div>';
+    html+='<div class="sec-t">'+tf('fullSequence',{n:seq.length})+'</div>';
+    html+='<div style="font-size:10px;color:var(--muted);margin-bottom:9px">'+t('commonByLevel')+'</div>';
+    html+='<div class="seq-wrap">'+seq.map((s,i)=>'<div class="snn '+(AC[s]||'sR')+'"><span class="lv">'+(i+1)+'</span>'+s+'</div>').join('')+'</div>';
+    html+='<div class="legend">'
+      +'<div class="legend-item"><div class="snn s1" style="width:20px;height:20px;position:relative">1</div>'+(AB[0]&&AB[0].name||'Ab 1')+'</div>'
+      +'<div class="legend-item"><div class="snn s2" style="width:20px;height:20px;position:relative">2</div>'+(AB[1]&&AB[1].name||'Ab 2')+'</div>'
+      +'<div class="legend-item"><div class="snn s3" style="width:20px;height:20px;position:relative">3</div>'+(AB[2]&&AB[2].name||'Ab 3')+'</div>'
+      +'<div class="legend-item"><div class="snn sR" style="width:20px;height:20px;position:relative">R</div>'+(AB[3]&&AB[3].name||'Ult')+'</div>'
+      +'</div>';
+  } else {
+    html+=bnr('info','Refresh',t('abilNotLoadedTitle'),tf('abilNotLoadedBody',{h:h.name}));
+  }
+  html+='<div class="src">'+(isLive?t('liveLabel'):t('defaultLabel'))+' · '+appData.patch+'</div>';
+  return html;
+}
+
+// ── EDIT MODE ─────────────────────────────────────────────────────────────────
+// ── UPDATE SYSTEM ─────────────────────────────────────────────────────────────
+// Build fetch batches — 5 heroes per API call to minimize total calls
+const BATCHES=[
+  ['graves','seven','mcginnis','victor','haze'],
+  ['lash','kelvin','yamato','ivy','warden'],
+  ['dynamo','lady-geist','the-doorman','mo-and-krill','drifter'],
+  ['paige','apollo','mina','abrams','calico'],
+  ['pocket','grey-talon','wraith','vindicta','celeste'],
+  ['infernus','billy','paradox','silver','shiv'],
+  ['bebop','vyper','mirage','holliday','viscous'],
+  ['sinclair','rem','venator'],
+];
+
+let updLog=[];
+let updTotal=0, updDone=0;
+function setBar(pct){const b=document.getElementById('updBar');if(b)b.style.width=pct+'%';}
+function addStep(state,msg,sub){
+  updLog.push({state,msg:msg||'',sub:sub||''});
+  const el=document.getElementById('updSteps');if(!el)return;
+  el.innerHTML=updLog.map(s=>{
+    const icon={done:'✓',active:'<span class="spin">Refresh</span>',err:'✗',skip:'○',section:''}[s.state]||'○';
+    if(s.state==='section') return '<div class="upd-section">'+s.msg+'</div>';
+    return '<div class="upd-step '+s.state+'"><div class="si">'+icon+'</div><div>'+(s.msg||'')+(s.sub?'<div style="font-size:10px;color:var(--hint);margin-top:1px">'+s.sub+'</div>':'')+'</div></div>';
+  }).join('');
+  el.scrollTop=el.scrollHeight;
+}
+function updateStep(idx,state,msg,sub){
+  if(idx<0||idx>=updLog.length)return;
+  updLog[idx]={state,msg,sub};
+  const el=document.getElementById('updSteps');if(!el)return;
+  const steps=el.querySelectorAll('.upd-step');
+  // Re-render all
+  el.innerHTML=updLog.map(s=>{
+    const icon={done:'✓',active:'<span class="spin">Refresh</span>',err:'✗',skip:'○',section:''}[s.state]||'○';
+    if(s.state==='section') return '<div class="upd-section">'+s.msg+'</div>';
+    return '<div class="upd-step '+s.state+'"><div class="si">'+icon+'</div><div>'+(s.msg||'')+(s.sub?'<div style="font-size:10px;color:var(--hint);margin-top:1px">'+s.sub+'</div>':'')+'</div></div>';
+  }).join('');
+}
+function closeUpd(){document.getElementById('updOverlay').classList.remove('show');updLog=[];}
+
+// ── ELECTRON API BRIDGE ──────────────────────────────────────────────────────
+// In Electron: window.api is injected by preload.js — direct HTTP, no CORS
+// In browser (fallback): window.api is undefined — update button disabled
+const IS_ELECTRON = typeof window !== 'undefined' && !!window.api;
+
+function checkElectron(){
+  if(!IS_ELECTRON){
+    alert(t('desktopOnly'));
+    return false;
+  }
+  return true;
+}
+
+// Wire up auto-update listener (Electron only)
+if(IS_ELECTRON){
+  window.api.onAutoUpdate(()=>{
+    console.log('Auto-update tick received from scheduler');
+    runUpdate(true); // silent=true for auto updates
+  });
+  window.api.getAppVersion().then(v=>{
+    const el=document.getElementById('appVersion');
+    if(el) el.textContent='v'+v;
+  });
+}
+
+async function runUpdate(silent=false){
+  if(!checkElectron()) return;
+  const btn=document.getElementById('updateBtn');
+  btn.classList.add('loading');btn.innerHTML=t('updateBtn').replace('Refresh','')+'...';
+  if(!silent){
+    updLog=[];
+    document.getElementById('updOverlay').classList.add('show');
+    document.getElementById('updSummary').classList.remove('show');
+    document.getElementById('updClose').classList.remove('show');
+  } else {
+    updLog=[];
+  }
+  setBar(0);
+
+  document.getElementById('updSub').innerHTML=
+    t('rankFilterStep')
+    +'<strong style="color:'+getRankColor()+'">'+getRankLabel()+'</strong>';
+
+  const badge = getRankBadge();
+  let herosFetched=0,buildsFetched=0,itemsFetched=0,absFetched=0,newHeroes=0;
+  let patch = appData.patch;
+
+  // ── PHASE 1: Hero win rates & pick rates ──────────────────────────────────
+  addStep('section', t('phase1'));
+  const stepH = updLog.length;
+  addStep('active', 'Obteniendo estadisticas de heroes desde deadlock-api.com...');
+  setBar(5);
+
+  const hRes = await window.api.fetchHeroStats(badge);
+  if(hRes.ok && hRes.data && hRes.data.length >= 10){
+    const incoming = hRes.data;
+    // Detect patch from data if available
+    appData.patch = patch;
+    const incMap = {};
+    incoming.forEach(h=>{ incMap[h.id]=h; incMap[h.name.toLowerCase()]=h; });
+
+    // Update existing heroes
+    appData.heroes.forEach(h=>{
+      const m=incMap[h.id]||incMap[h.name.toLowerCase()];
+      if(m){ h.wr=m.wr; if(m.pick)h.pick=m.pick; h.tier=toTier(m.wr); h.patched=patch; herosFetched++; }
+    });
+    // Add new heroes not in our list
+    incoming.forEach(h=>{
+      if(!appData.heroes.find(x=>x.id===h.id||x.name.toLowerCase()===h.name.toLowerCase())){
+        appData.heroes.push({id:h.id,name:h.name,wr:h.wr,pick:h.pick||0,tier:h.tier,added:patch,patched:patch});
+        newHeroes++;
+      }
+    });
+    // Remove retired heroes (only if we got a full list)
+    if(incoming.length>=30){
+      appData.heroes = appData.heroes.filter(h=>{
+        const m=incMap[h.id]||incMap[h.name.toLowerCase()];
+        if(!m){ delete appData.heroData[h.id]; return false; }
+        return true;
+      });
+    }
+    logEntry('Phase1','ok','','38 heroes updated','');
+    updateStep(stepH,'done',
+      t('updatedHeroes')+herosFetched+t('heroesSuffix')+'+'+newHeroes+t('heroesNew'),
+      ('Fuente: deadlock-api.com · Rango: ')+getRankLabel());
+  } else {
+    const p1err = hRes.error||'unknown';
+    logEntry('Phase1','err','','Hero fetch failed',p1err);
+    const gaiusMsg = '<div style="background:rgba(250,68,84,.06);border:1px solid rgba(250,68,84,.2);border-radius:7px;padding:11px 13px;margin-top:8px"><div style="font-size:13px;font-weight:600;color:#fa8080;font-style:italic;margin-bottom:2px">'+t('gaiusQuote')+'</div><div style="font-size:10px;color:#3e3e4a;margin-top:4px">'+t('gaiusAttrib')+'</div></div><div style="font-size:11px;color:#7a7a88;margin-top:8px;display:flex;align-items:center;gap:6px"><span style="width:6px;height:6px;border-radius:50%;background:#34d399;display:inline-block;flex-shrink:0"></span>'+t('dataSafe')+'</div>';
+    updateStep(stepH,'err',
+      t('fetchHeroErr')+p1err, gaiusMsg);
+  }
+  setBar(12);
+
+  // ── PHASE 2: Builds for all heroes (one at a time, polite rate) ───────────
+  addStep('section', t('phase2'));
+  const allIds = appData.heroes.map(h=>h.id);
+  const total  = allIds.length;
+
+  for(let bi=0; bi<total; bi++){
+    const id   = allIds[bi];
+    const hero = appData.heroes.find(h=>h.id===id); if(!hero) continue;
+    const bsi  = updLog.length;
+    addStep('active', (bi+1)+'/'+total+': '+hero.name+'...');
+    setBar(12 + Math.round(bi/total*55));
+
+    const bRes = await window.api.fetchHeroBuild(id);
+    if(bRes.ok && bRes.data && bRes.data.early && bRes.data.early.length){
+      logEntry('Phase2','ok',id,'Build updated','sections:'+(bRes.data.early.length+bRes.data.core.length+bRes.data.late.length));
+      if(!appData.heroData[id]) appData.heroData[id]={};
+      const hd = appData.heroData[id];
+      // Delete old, write new — clean atomic replace
+      hd.build = {
+        patch:       bRes.data.patch || patch,
+        source:      bRes.data.source || 'deadlock.coach',
+        sourceUrl:   bRes.data.sourceUrl || 'https://deadlock-api.com/heroes/'+id,
+        weeklyViews: bRes.data.weeklyViews || 0,
+        early:       bRes.data.early  || [],
+        core:        bRes.data.core   || [],
+        late:        bRes.data.late   || [],
+        abilityOrder:bRes.data.abilityOrder || '',
+        openerNote:  bRes.data.openerNote   || '',
+      };
+      if(bRes.data.abilities && bRes.data.abilities.length>=2){
+        hd.abilities = bRes.data.abilities;
+        absFetched++;
+      }
+      buildsFetched++;
+      updateStep(bsi,'done', hero.name+' ✓',
+        t('buildOrderUpdated'));
+    } else {
+      updateStep(bsi, bRes.ok?'skip':'err',
+        hero.name+t('noApiData'),
+        bRes.error || t('keepPrevious'));
+    }
+  }
+  setBar(70);
+
+  // ── PHASE 3: Item stats for all heroes with numeric IDs ───────────────────
+  addStep('section', t('phase3'));
+  const itemStep = updLog.length;
+  addStep('active', t('fetchingItemWr'));
+
+  const heroesWithIds = appData.heroes.filter(h=>{
+    // Only fetch if we know the numeric ID
+    const NUMERIC = {"graves":1,"abrams":2,"lash":3,"infernus":4,"shiv":6,"haze":7,
+      "dynamo":8,"grey-talon":10,"mo-and-krill":11,"pocket":13,"seven":15,
+      "vindicta":16,"lady-geist":18,"bebop":20,"kelvin":21,"ivy":22,
+      "paradox":25,"warden":27,"yamato":31,"mcginnis":37,"wraith":38,
+      "mirage":39,"calico":40,"holliday":50,"vyper":51,"sinclair":52,
+      "rem":54,"billy":58,"victor":59,"drifter":60,"the-doorman":61,
+      "silver":62,"celeste":63,"apollo":64,"mina":65,"venator":66,
+      "paige":67,"viscous":68};
+    return !!NUMERIC[h.id];
+  });
+
+  for(const hero of heroesWithIds){
+    const iRes = await window.api.fetchItemStats(hero.id, badge);
+    if(iRes.ok && iRes.data && iRes.data.length>=5){
+      if(!appData.heroData[hero.id]) appData.heroData[hero.id]={};
+      // Delete old items entirely, write fresh
+      appData.heroData[hero.id].items = iRes.data;
+      itemsFetched++;
+    }
+    setBar(70 + Math.round(itemsFetched/heroesWithIds.length*15));
+  }
+  updateStep(itemStep,'done',
+    t('itemsUpdatedFor')+itemsFetched+' '+t('heroCount')+' ✓',
+    t('itemWrReplaced'));
+  setBar(87);
+
+  // ── FASE 5: Counters y Sinergias por héroe ────────────────────────────────
+  addStep('section', t('phase5c'));
+  const csStep = updLog.length;
+  addStep('active', t('fetchingCounters'));
+  let countersFetched = 0, synergiesFetched = 0;
+  for(const hero of heroesWithIds){
+    try{
+      const [cRes, sRes] = await Promise.all([
+        window.api.fetchHeroCounters(hero.id, badge),
+        window.api.fetchHeroSynergies(hero.id, badge),
+      ]);
+      if(!appData.heroData[hero.id]) appData.heroData[hero.id]={};
+      if(cRes.ok && cRes.data && (cRes.data.strong?.length || cRes.data.weak?.length)){
+        appData.heroData[hero.id].counters = cRes.data;
+        countersFetched++;
+      }
+      if(sRes.ok && sRes.data && sRes.data.best?.length){
+        appData.heroData[hero.id].synergies = sRes.data;
+        synergiesFetched++;
+      }
+    }catch(e){ /* se mantienen datos previos */ }
+    setBar(87 + Math.round((countersFetched/heroesWithIds.length)*5));
+  }
+  updateStep(csStep,'done',
+    tf('countersSynUpdated',{c:countersFetched,s:synergiesFetched}),
+    t('countersSynSub'));
+  setBar(92);
+
+  // ── PHASE 4: Leaderboard (current region + rank) ──────────────────────────
+  addStep('section', t('phase4'));
+  const lbStep = updLog.length;
+  const region = appData.lbRegion || 'sa';
+  addStep('active', ('Obteniendo clasificacion — region: ')+region.toUpperCase()+'...');
+
+  const lbRes = await window.api.fetchLeaderboard(region, badge);
+  if(lbRes.ok && lbRes.data && lbRes.data.length>0){
+    appData.leaderboard = lbRes.data;
+    appData.leaderboardUpdatedAt = new Date().toISOString().slice(0,10);
+    updateStep(lbStep,'done',
+      t('leaderboardUpdated')+lbRes.data.length+t('playersSuffix'));
+  } else {
+    updateStep(lbStep,'err',
+      ('Error en clasificacion: ')+(lbRes.error||'unknown'));
+  }
+  setBar(95);
+
+  // ── PHASE 5: Save ─────────────────────────────────────────────────────────
+  addStep('section', t('phase5s'));
+  const saveStep = updLog.length;
+  addStep('active', t('savingData'));
+
+  appData.updatedAt = new Date().toISOString().slice(0,10);
+  saveApp();
+  renderSB(); renderMain();
+  setBar(100);
+
+  const summary = [];
+  if(herosFetched)   summary.push(('heroes (VIC/SEL)'));
+  if(buildsFetched)  summary.push(('builds'));
+  if(itemsFetched)   summary.push(('stats de items'));
+
+  updateStep(saveStep,'done',
+    t('savedAt')+summary.join(', '),
+    appData.heroes.length+t('heroesSuffix')+Object.keys(appData.heroData).length+t('heroesWithFull'));
+
+  const sumEl = document.getElementById('updSummary');
+  sumEl.innerHTML = '<strong style="color:var(--green)">✓ '+t('updateComplete')+'</strong><br>'
+    + herosFetched+t('sumVicSel')
+    + buildsFetched+t('sumBuilds')
+    + itemsFetched+t('sumItems')
+    + (newHeroes?('+'+newHeroes+' nuevos heroes detectados<br>'):'')
+    + t('sumPatch')+appData.patch+' · '+t('sumSaved')+appData.updatedAt;
+  sumEl.classList.add('show');
+
+  document.getElementById('updClose').classList.add('show');
+  btn.classList.remove('loading');
+  btn.innerHTML = t('updateBtn');
+}
+
+// ── RANK SELECTOR ────────────────────────────────────────────────────────────
+function setLang(l){
+  if(l!=='es' && l!=='en') l='es';
+  if(l===LANG){ updateLangPill(); return; }
+  LANG=l;
+  try{ localStorage.setItem('lc_lang', l); }catch(e){}
+  updateLangPill();
+  applyStaticLang();   // header, nav, sidebar, TOS, static labels
+  applyLang();         // existing dynamic label refresh
+  renderMain();        // re-render the active hero/tab content
+  renderSB(document.getElementById('heroSearch') ? document.getElementById('heroSearch').value.toLowerCase() : '');
+}
+function toggleLang(){ setLang(LANG==='es'?'en':'es'); }
+function updateLangPill(){
+  const es=document.getElementById('langEs'), en=document.getElementById('langEn');
+  if(es) es.classList.toggle('on', LANG==='es');
+  if(en) en.classList.toggle('on', LANG==='en');
+  const tes=document.getElementById('tosLangEs'), ten=document.getElementById('tosLangEn');
+  if(tes) tes.classList.toggle('on', LANG==='es');
+  if(ten) ten.classList.toggle('on', LANG==='en');
+}
+
+function applyLang(){
+  const ub = document.getElementById('updateBtn');
+  if(ub) ub.innerHTML = t('updateBtn');
+
+
+  applyNavLang();
+}
+
+function populateRankSel(){
+  const sel=document.getElementById('rankSel');
+  if(!sel)return;
+  sel.innerHTML=RANKS.map(r=>{
+    const selected=getRank()===r.id?'selected':'';
+    return '<option value="'+r.id+'" '+selected+'>'+r.label+'</option>';
+  }).join('');
+  updateRankBadge();
+}
+function updateRankBadge(){
+  const sel=document.getElementById('rankSel');
+  if(!sel)return;
+  sel.style.borderColor=getRankColor();
+  sel.style.color=getRankColor();
+  sel.title='Rank filter: '+getRankLabel()+' (badge ≥'+getRankBadge()+') · Applied on next Update';
+}
+function setRank(rankId){
+  appData.selectedRank=rankId;
+  saveApp();
+  updateRankBadge();
+  // Show a notice if rank changed — next Update will use this rank
+  const btn=document.getElementById('updateBtn');
+  if(btn) btn.title='Will fetch data for: '+getRankLabel();
+  renderMain(); // Re-render to show rank label in stats
+}
+
+// ── NAV SYSTEM ───────────────────────────────────────────────────────────────
+let currentNav = 'roster';
+function setNav(nav){
+  currentNav = nav;
+  ['roster','lb','patch','map','logs'].forEach(n=>{
+    document.getElementById('nav-'+n).classList.toggle('active', n===nav);
+  });
+  selected = null;
+  renderMain();
+}
+function applyNavLang(){
+  const nt = document.getElementById('nt-roster'); if(nt) nt.textContent = t('navRoster');
+  const nl = document.getElementById('nt-lb');     if(nl) nl.textContent = t('navLeaderboard');
+  const np = document.getElementById('nt-patch');  if(np) np.textContent = t('navPatch');
+  const nm = document.getElementById('nt-map');    if(nm) nm.textContent = t('navMapData');
+  const nl2 = document.getElementById('nt-logs'); if(nl2) nl2.textContent = t('navLogs');
+}
+function applyStaticLang(){
+  const sub=document.getElementById('appSub'); if(sub) sub.textContent=t('appSub');
+  const lf=document.getElementById('leg-full');  if(lf) lf.textContent=t('fullData');
+  const lb=document.getElementById('leg-basic'); if(lb) lb.textContent=t('basicStats');
+  const ln=document.getElementById('leg-new');   if(ln) ln.textContent=t('newHero');
+  const le=document.getElementById('leg-empty'); if(le) le.textContent=t('noData');
+  const rs=document.getElementById('rankSel');   if(rs) rs.title=t('rankFilterTitle');
+  // TOS static bits
+  const tt=document.getElementById('tosTitle');   if(tt) tt.textContent=t('tosTitle');
+  const tsub=document.getElementById('tosSub');   if(tsub) tsub.textContent=t('tosSub');
+  const tc1=document.getElementById('tosCb1Lbl'); if(tc1) tc1.textContent=t('tosAcceptCheck');
+  const tc2=document.getElementById('tosCb2Lbl'); if(tc2) tc2.textContent=t('tosNoShow');
+  const tdec=document.getElementById('tosDeclineBtn'); if(tdec) tdec.textContent=t('tosExit');
+  const tacc=document.getElementById('tosAcceptBtn');  if(tacc) tacc.textContent=t('tosAcceptBtn');
+  const tvn=document.getElementById('tosVnote');  if(tvn) tvn.textContent=t('tosVnote');
+  const tEs=document.getElementById('tosEs'); const tEn=document.getElementById('tosEn');
+  if(tEs&&tEn){ tEs.style.display = LANG==='en'?'none':'block'; tEn.style.display = LANG==='en'?'block':'none'; }
+  applyNavLang();
+}
+
+// ── RANK MESSAGE BANNER ────────────────────────────────────────────────────────
+function rankMsgBanner(){
+  const rid = getRank();
+  const msg = rankMsg(rid);
+  if(!msg) return '';
+  return '<div class="rank-banner">'
+    +'<h3>ℹ️ '+msg.title+'</h3>'
+    +'<p>'+msg.body+'</p>'
+    +'</div>';
+}
+
+// ── LEADERBOARD ────────────────────────────────────────────────────────────────
+let lbRegion = 'sa'; // Default SA for LATAM audience
+
+// Switching region: data is region-specific, so refetch live (in app) or just
+// re-render (in browser, where only example data is available).
+async function changeLbRegion(v){
+  lbRegion = v;
+  appData.lbRegion = v;
+  saveApp();
+  if(IS_ELECTRON && window.api && window.api.fetchLeaderboard){
+    try{
+      const badge = getRankBadge();
+      const res = await window.api.fetchLeaderboard(v, badge);
+      if(res && res.ok && res.data && res.data.length>0){
+        appData.leaderboard = res.data;
+        appData.leaderboardUpdatedAt = new Date().toISOString().slice(0,10);
+        saveApp();
+      } else {
+        appData.leaderboard = []; // no data for this region -> show examples
+      }
+    }catch(e){ console.log('[leaderboard] region switch error:', e.message); }
+  }
+  renderLeaderboard();
+}
+
+function renderLeaderboard(){
+  const lu = appData.updatedAt;
+  const regOpts = REGIONS.map(r=>'<option value="'+r.id+'"'+(r.id===lbRegion?' selected':'')+'>'+regionLabel(r.id)+'</option>').join('');
+  const isSA = lbRegion==='sa';
+
+  let html = '<div class="home-hdr">'
+    +'<h2>'+t('leaderboardTitle')+'</h2>'
+    +'<p>'+t('leaderboardSub')+' · '+(lu?'<span style="color:var(--green)">'+t('liveData')+' · '+lu+'</span>':'<span style="color:var(--amber)">'+t('pressUpdate')+'</span>')+'</p>'
+    +'</div>';
+
+  // Region + rank filter bar
+  html += '<div class="lb-filters">'
+    +'<label style="font-size:11px;color:var(--muted)">'+t('region')+'</label>'
+    +'<select onchange="changeLbRegion(this.value)" style="background:var(--surface);border:1px solid var(--border);color:var(--text);border-radius:5px;padding:4px 8px;font-size:11px;cursor:pointer;outline:none;">'+regOpts+'</select>'
+    +'<span style="font-size:11px;color:var(--muted);margin-left:6px">'+t('rank')+':</span>'
+    +'<span style="font-size:11px;font-weight:600;color:'+getRankColor()+'">'+getRankLabel()+'</span>'
+    +'<span class="coming-soon" style="margin-left:8px">'+t('comingSoonApp')+'</span>'
+    +'</div>';
+
+  // Rank explanation banner
+  html += rankMsgBanner();
+
+  // Placeholder leaderboard table
+  const colHeaders = [t('lbPos'),t('lbPlayer'),t('lbRegion'),t('lbMainHero'),t('lbTopHeroes'),t('lbPlayerRank')];
+
+  html += '<table class="lb-table"><thead><tr>'
+    + colHeaders.map(c=>'<th>'+c+'</th>').join('')
+    + '</tr></thead><tbody>';
+
+  // Use live data if available, otherwise show placeholder.
+  // NOTE: the leaderboard endpoint is already region-specific (we fetch
+  // /leaderboard/SAmerica etc.), so every returned row is from that region.
+  // Re-filtering by p.region here was dropping all live rows when the stored
+  // region label didn't exactly match — so we trust the fetched set directly.
+  const lbData = (appData.leaderboard||[]);
+  const showingLive = lbData.length > 0;
+  const displayPlayers = showingLive ? lbData.slice(0,200) : [
+    {pos:1,name:'Chanlaser',  region:'SA',main:'Graves', heroes:['Graves','Seven','Haze'],  rankLabel:'Eternus VI'},
+    {pos:2,name:'EjemploJug2',region:'SA',main:'Seven',  heroes:['Seven','Victor','Kelvin'], rankLabel:'Eternus II'},
+    {pos:3,name:'EjemploJug3',region:'SA',main:'Haze',   heroes:['Haze','Yamato','Pocket'],rankLabel:'Ascendant V'},
+    {pos:4,name:'EjemploJug4',region:'SA',main:'Victor', heroes:['Victor','Dynamo','Abrams'], rankLabel:'Ascendant I'},
+    {pos:5,name:'EjemploJug5',region:'SA',main:'Dynamo', heroes:['Dynamo','Kelvin','Ivy'],rankLabel:'Phantom VI'},
+  ];
+
+  displayPlayers.forEach(p=>{
+    const mainHero = p.main || p.mainHero || '—';
+    const heroList = (Array.isArray(p.heroes) ? p.heroes : []).slice(0,3);
+    const rankTxt  = p.rankLabel || (p.matches ? p.matches.toLocaleString() : '—');
+    html += '<tr>'
+      +'<td><span class="lb-pos'+(p.pos<=3?' top3':'')+'">'+p.pos+'</span></td>'
+      +'<td><strong>'+p.name+'</strong></td>'
+      +'<td><span style="background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:2px 7px;font-size:10px;">'+p.region+'</span></td>'
+      +'<td><span style="color:var(--green);font-weight:600;">'+mainHero+'</span></td>'
+      +'<td><div class="hero-chips">'+heroList.map(h=>'<span class="hero-chip">'+h+'</span>').join('')+'</div></td>'
+      +'<td style="color:var(--amber);font-weight:600;font-size:11px">'+rankTxt+'</td>'
+      +'</tr>';
+  });
+  html += '</tbody></table>';
+
+  // Explanation — conditional on whether live data is showing
+  const showLiveNotice = !showingLive;
+  html += '<div style="margin-top:14px;padding:12px 14px;background:var(--surface2);border-radius:7px;font-size:11px;color:var(--muted);line-height:1.7">';
+  html += '<strong style="color:var(--text)">'+t('lbWhyExample')+'</strong><br>'+t('lbExampleBody');
+  html += '</div>';
+
+  document.getElementById('mainContent').innerHTML = html;
+}
+
+// ── MAP DATA ──────────────────────────────────────────────────────────────────
+function renderMapData(){
+  const lu = appData.updatedAt;
+  let html = '<div class="home-hdr">'
+    +'<h2>'+t('mapTitle')+'</h2>'
+    +'<p>'+t('mapSub')+' · '+(lu?'<span style="color:var(--green)">'+t('liveData')+' · '+lu+'</span>':'<span style="color:var(--amber)">'+t('pressUpdate')+'</span>')+'</p>'
+    +'</div>';
+
+  html += rankMsgBanner();
+
+  const cards = [
+    { title:t('mapCardDeathTitle'), sub:t('mapCardDeathSub'), detail:t('mapCardDeathDetail') },
+    { title:t('mapCardObjTitle'),   sub:t('mapCardObjSub'),   detail:t('mapCardObjDetail') },
+    { title:t('mapCardFarmTitle'),  sub:t('mapCardFarmSub'),  detail:t('mapCardFarmDetail') },
+    { title:t('mapCardLaneTitle'),  sub:t('mapCardLaneSub'),  detail:t('mapCardLaneDetail') },
+    { title:t('mapCardFightTitle'), sub:t('mapCardFightSub'), detail:t('mapCardFightDetail') },
+    { title:t('mapCardRotTitle'),   sub:t('mapCardRotSub'),   detail:t('mapCardRotDetail') },
+  ];
+
+  html += '<div class="map-grid">';
+  cards.forEach(c=>{
+    html += '<div class="map-card">'
+      +'<h3>'+c.title+'</h3>'
+      +'<div class="mc-sub">'+c.sub+'</div>'
+      +'<div class="map-placeholder">'
+      +'<div class="mp-icon">'+(c.title.split(' ')[0])+'</div>'
+      +'<p>'+c.detail+'</p>'
+      +'<span class="coming-soon">'+t('comingSoonApp')+'</span>'
+      +'</div>'
+      +'</div>';
+  });
+  html += '</div>';
+
+  // Explanation
+  html += '<div style="padding:13px 15px;background:var(--surface2);border-radius:7px;font-size:11px;color:var(--muted);line-height:1.7">';
+  html += '<strong style="color:var(--text)">'+t('mapWhyTitle')+'</strong><br>'+t('mapWhyBody');
+  html += '</div>';
+
+  document.getElementById('mainContent').innerHTML = html;
+}
+
+// ── TERMS OF SERVICE ─────────────────────────────────────────────────────────
+const TOS_KEY     = 'lc_tos_accepted';
+const TOS_VERSION = '1.0.0';
+let tosSavedLang  = 'es';   // user's real lang pref, restored after TOS accept
+
+function tosCbToggle(cbId, btnId){
+  const cb = document.getElementById(cbId);
+  const on = cb.classList.contains('on');
+  cb.classList.toggle('on', !on);
+  cb.textContent = on ? '' : '✓';
+  // Enable/disable accept button when main checkbox is toggled
+  if(btnId){
+    const btn = document.getElementById(btnId);
+    if(btn) btn.classList.toggle('enabled', !on);
+  }
+}
+
+function tosAccept(){
+  const btn = document.getElementById('tosAcceptBtn');
+  if(!btn.classList.contains('enabled')) return;
+  // If "do not show again" is checked, save to localStorage
+  const noShow = document.getElementById('tosCb2').classList.contains('on');
+  if(noShow) localStorage.setItem(TOS_KEY, TOS_VERSION);
+  // Hide overlay
+  const overlay = document.getElementById('tosOverlay');
+  if(overlay) overlay.style.display = 'none';
+  // Restore the user's real language preference (the TOS was forced to ES).
+  // If they flipped the in-modal pill, that choice already persisted and wins.
+  const cur = (localStorage.getItem('lc_lang')==='en') ? 'en' : 'es';
+  if(cur !== LANG){ setLang(cur); }
+  else if(tosSavedLang !== LANG){ setLang(tosSavedLang); }
+}
+
+function tosDecline(){
+  // In Electron: close the app. In browser: redirect away or show message.
+  if(IS_ELECTRON && window.api && window.api.platform){
+    // Send close signal — handled gracefully
+    window.close();
+  } else {
+    document.getElementById('tosOverlay').innerHTML =
+      '<div style="text-align:center;color:#7a7a88;font-size:13px;padding:40px">'
+      +'<div style="font-size:32px;margin-bottom:12px">🔒</div>'
+      +'<p>'+t('tosMustAccept')+'</p>'
+      +'</div>';
+  }
+}
+
+function checkTos(){
+  const accepted = localStorage.getItem(TOS_KEY);
+  const overlay  = document.getElementById('tosOverlay');
+  if(!overlay) return;
+  // Show if never accepted OR accepted a different version
+  if(accepted === TOS_VERSION){
+    overlay.style.display = 'none';
+  } else {
+    // TOS gate is visible: ALWAYS present it in Spanish first (default audience),
+    // regardless of any saved language preference. We remember the user's saved
+    // choice and restore it once they accept, so their app-wide preference isn't
+    // lost. They can still flip the in-modal ES|EN pill while reading.
+    tosSavedLang = (localStorage.getItem('lc_lang')==='en') ? 'en' : 'es';
+    LANG = 'es';                 // force Spanish for the modal (not persisted)
+    updateLangPill();
+    applyStaticLang();           // swaps TOS body + static labels to ES
+  }
+}
+
+// ── ERROR LOGS ───────────────────────────────────────────────────────────────────
+const MAX_LOG_SESSIONS = 20;
+let logSessions = [];
+let currentSession = null;
+
+function startLogSession(){
+  currentSession = {
+    ts: new Date().toISOString(),
+    version: '1.0.0',
+    patch: appData.patch || '—',
+    rank: (document.getElementById('rankSel')||{value:'9'}).value,
+    entries: [],
+    status: 'running',
+  };
+}
+
+function logEntry(phase, status, hero, message, detail){
+  if(!currentSession) return;
+  currentSession.entries.push({
+    ts: new Date().toISOString(),
+    phase,
+    status, // 'ok' | 'err' | 'skip' | 'info'
+    hero: hero || '',
+    message: message || '',
+    detail: detail || '',
+  });
+}
+
+function endLogSession(summary){
+  if(!currentSession) return;
+  currentSession.status = summary.errors > 0 ? 'partial' : 'ok';
+  currentSession.summary = summary;
+  logSessions.unshift(currentSession);
+  if(logSessions.length > MAX_LOG_SESSIONS) logSessions = logSessions.slice(0, MAX_LOG_SESSIONS);
+  currentSession = null;
+  // Save to localStorage
+  try{ localStorage.setItem('lc_logs', JSON.stringify(logSessions)); }catch(e){}
+  // Update logs badge
+  updateLogsBadge();
+}
+
+function loadLogs(){
+  try{
+    const saved = localStorage.getItem('lc_logs');
+    if(saved) logSessions = JSON.parse(saved);
+  }catch(e){ logSessions = []; }
+}
+
+function updateLogsBadge(){
+  const errCount = logSessions.filter(s=>s.status==='partial'||s.status==='err').length;
+  const tab = document.getElementById('nav-logs');
+  if(!tab) return;
+  const existing = tab.querySelector('.log-badge');
+  if(existing) existing.remove();
+  if(errCount > 0){
+    const badge = document.createElement('span');
+    badge.className = 'log-badge';
+    badge.textContent = errCount;
+    badge.style.cssText = 'background:#fa4454;color:#fff;border-radius:8px;font-size:9px;padding:1px 5px;margin-left:4px;font-weight:700;';
+    tab.appendChild(badge);
+  }
+}
+
+function renderLogs(){
+  const mc = document.getElementById('mainContent');
+  if(!mc) return;
+
+  if(logSessions.length === 0){
+    mc.innerHTML = '<div class="nodata">'
+      +'<div class="nd-icon">🔍</div>'
+      +'<h3>'+t('logNoRecords')+'</h3>'
+      +'<p>'+t('logNoRecordsBody')+'</p>'
+      +'</div>';
+    return;
+  }
+
+  let html = '<div class="home-hdr">'
+    +'<h2>'+('Registro de Errores y Logs')+'</h2>'
+    +'<p>'+t('logHistoryPre')+logSessions.length+t('logHistoryPost')+'</p>'
+    +'</div>';
+
+  // Copy all button
+  html += '<div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;">'
+    +'<button onclick="copyAllLogs()" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:6px;padding:5px 14px;font-size:11px;cursor:pointer;">'
+    +('📋 Copiar todo')+'</button>'
+    +'<button onclick="clearLogs()" style="background:transparent;border:1px solid var(--border);color:var(--muted);border-radius:6px;padding:5px 14px;font-size:11px;cursor:pointer;">'
+    +('🗑 Limpiar logs')+'</button>'
+    +'</div>';
+
+  logSessions.forEach((session, idx) => {
+    const isOk = session.status === 'ok';
+    const isErr = session.status === 'partial' || session.status === 'err';
+    const statusColor = isOk ? 'var(--green)' : isErr ? '#fa4454' : 'var(--amber)';
+    const statusLabel = isOk ? ('✓ Completo') : isErr ? ('⚠ Con errores') : ('⏳ En curso');
+    const date = new Date(session.ts).toLocaleString();
+    const errEntries = session.entries.filter(e=>e.status==='err');
+    const okEntries  = session.entries.filter(e=>e.status==='ok');
+    const skipEntries = session.entries.filter(e=>e.status==='skip');
+
+    html += '<div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;margin-bottom:10px;overflow:hidden;">'
+
+      +'<div style="display:flex;align-items:center;gap:8px;padding:10px 14px;background:var(--surface2);cursor:pointer;" onclick="toggleLogSession('+idx+')">'
+      +'<span style="color:'+statusColor+';font-size:12px;font-weight:700;">'+statusLabel+'</span>'
+      +'<span style="font-size:11px;color:var(--muted);">'+date+'</span>'
+      +'<span style="font-size:10px;color:var(--hint);margin-left:4px;">v'+session.version+' · '+t('patchLabel')+' '+session.patch+'</span>'
+      +'<span style="margin-left:auto;display:flex;gap:8px;font-size:10px;">'
+      +(okEntries.length?'<span style="color:var(--green)">✓ '+okEntries.length+'</span>':'')
+      +(errEntries.length?'<span style="color:#fa4454">✗ '+errEntries.length+'</span>':'')
+      +(skipEntries.length?'<span style="color:var(--muted)">○ '+skipEntries.length+'</span>':'')
+      +'</span>'
+      +'<span style="color:var(--muted);font-size:11px;" id="log-toggle-'+idx+'">▼</span>'
+      +'</div>'
+      // Entries (collapsed by default for older sessions, expanded for latest)
+
+      +'<div style="padding:8px 14px;display:flex;gap:8px;margin-bottom:2px;">'
+      +'<button onclick="copySession('+idx+')" style="background:transparent;border:1px solid var(--border);color:var(--muted);border-radius:4px;padding:2px 10px;font-size:10px;cursor:pointer;">'
+      +('📋 Copiar esta sesión')+'</button>'
+      +'</div>'
+      +'<div style="font-family:monospace;font-size:10px;line-height:1.8;padding:6px 14px 10px;max-height:300px;overflow-y:auto;">'
+      + session.entries.map(entry => {
+          const eColor = entry.status==='ok'?'var(--green)':entry.status==='err'?'#fa4454':entry.status==='skip'?'var(--muted)':'var(--amber)';
+          const icon = {ok:'✓',err:'✗',skip:'○',info:'ℹ'}[entry.status]||'·';
+          const time = new Date(entry.ts).toLocaleTimeString();
+          return '<div style="display:flex;gap:8px;padding:1px 0;border-bottom:1px solid rgba(255,255,255,0.03);">'
+            +'<span style="color:var(--hint);min-width:60px;">'+time+'</span>'
+            +'<span style="color:'+eColor+';min-width:12px;">'+icon+'</span>'
+            +'<span style="color:var(--hint);min-width:55px;">'+entry.phase+'</span>'
+            +(entry.hero?'<span style="color:var(--text);min-width:80px;">'+entry.hero+'</span>':'<span style="min-width:80px;"></span>')
+            +'<span style="color:'+(entry.status==='err'?'#fa8080':'var(--muted)')+'">'+entry.message+'</span>'
+            +(entry.detail?'<span style="color:var(--hint);margin-left:4px;">— '+entry.detail+'</span>':'')
+            +'</div>';
+        }).join('')
+      +'</div></div></div>';
+  });
+
+  mc.innerHTML = html;
+  updateLogsBadge();
+}
+
+function toggleLogSession(idx){
+  const body = document.getElementById('log-body-'+idx);
+  const toggle = document.getElementById('log-toggle-'+idx);
+  if(!body) return;
+  const hidden = body.style.display === 'none';
+  body.style.display = hidden ? 'block' : 'none';
+  if(toggle) toggle.textContent = hidden ? '▲' : '▼';
+}
+
+function copySession(idx){
+  const session = logSessions[idx];
+  if(!session) return;
+  const text = formatSessionText(session);
+  navigator.clipboard.writeText(text).then(()=>alert('✓ Copiado / Copied!')).catch(()=>{});
+}
+
+function copyAllLogs(){
+  const sep = '\n\n' + '='.repeat(60) + '\n\n';
+
+
+
+
+  const text = logSessions.map(formatSessionText).join(sep);
+
+
+
+  navigator.clipboard.writeText(text).then(()=>alert('✓ Todos los logs copiados / All logs copied!')).catch(()=>{});
+}
+
+function clearLogs(){
+  if(!confirm('¿Borrar todos los logs?')) return;
+  logSessions = [];
+  try{ localStorage.removeItem('lc_logs'); }catch(e){}
+  renderLogs();
+  updateLogsBadge();
+}
+
+function formatSessionText(session){
+  const lines = [
+    '=== LaCitadel Update Log ===',
+    'Time:    '+new Date(session.ts).toLocaleString(),
+    'Version: '+session.version,
+    'Patch:   '+session.patch,
+    'Status:  '+session.status,
+    '',
+    '--- Entries ---',
+    ...session.entries.map(e => {
+      const icon = {ok:'✓',err:'✗',skip:'○',info:'ℹ'}[e.status]||'·';
+      const t = new Date(e.ts).toLocaleTimeString();
+      return [t, icon, e.phase, e.hero, e.message, e.detail].filter(Boolean).join(' | ');
+    }),
+    '',
+    '--- Summary ---',
+    'OK:   '+(session.entries.filter(e=>e.status==='ok').length),
+    'ERR:  '+(session.entries.filter(e=>e.status==='err').length),
+    'SKIP: '+(session.entries.filter(e=>e.status==='skip').length),
+  ];
+  return lines.join("\n");
+
+}
+
+
+// ── INIT ──────────────────────────────────────────────────────────────────────
+checkTos();
+loadLogs();
+loadApp();
+populateRankSel();
+updateLogsBadge();
+updateLangPill();
+applyStaticLang();
+applyLang();
+renderSB();
+renderHome();
+
+// Show electron status
+const auLbl = document.getElementById('autoUpLabel');
+if(IS_ELECTRON){
+  if(auLbl) auLbl.innerHTML = '<span style="color:var(--green)">App mode — auto-update ON (6h)</span>';
+
+  // ── APP UPDATE LISTENERS ──────────────────────────────────────────────────
+  let updateReady = false;
+
+  window.api.onAppUpdateAvailable((info) => {
+    const bar = document.getElementById('appUpdateBar');
+    const ver = document.getElementById('appUpdateVersion');
+    if(bar) bar.classList.add('show');
+    if(ver) ver.textContent = 'v' + info.version;
+  });
+
+  window.api.onAppUpdateProgress((pct) => {
+    const msg  = document.getElementById('appUpdateMsg');
+    const prog = document.getElementById('appUpdateProgress');
+    const pctEl = document.getElementById('appUpdatePct');
+    if(msg)  msg.style.display  = 'none';
+    if(prog) prog.style.display = 'inline';
+    if(pctEl) pctEl.textContent = pct;
+  });
+
+  window.api.onAppUpdateDownloaded(() => {
+    updateReady = true;
+    const btn  = document.getElementById('appUpdateBtn');
+    const prog = document.getElementById('appUpdateProgress');
+    if(prog) prog.style.display = 'none';
+    if(btn){
+      btn.textContent = '↻ Reiniciar / Restart';
+      btn.style.background = 'var(--green)';
+    }
+  });
+
+  window.api.onAppUpdateError((msg) => {
+    const bar = document.getElementById('appUpdateBar');
+    if(bar) bar.innerHTML = '<span style="color:var(--red)">⚠ Update error: '+msg+'</span><span class="upd-dismiss" onclick="dismissUpdate()">×</span>';
+  });
+
+  window.handleUpdateClick = function(){
+    if(updateReady){ window.api.installUpdate(); }
+    else {
+      const btn = document.getElementById('appUpdateBtn');
+      if(btn){ btn.textContent = 'Descargando...'; btn.disabled = true; }
+      window.api.downloadUpdate();
+    }
+  };
+
+  window.dismissUpdate = function(){
+    const bar = document.getElementById('appUpdateBar');
+    if(bar) bar.classList.remove('show');
+  };
+
+} else {
+  if(auLbl) auLbl.innerHTML = '<span style="color:var(--amber)">Browser mode — limited</span>';
+  const ubtn = document.getElementById('updateBtn');
+  if(ubtn){ ubtn.title = 'Full updates require the Desktop App'; ubtn.style.opacity='0.5'; }
+  window.handleUpdateClick = function(){};
+  window.dismissUpdate = function(){};
+}
+</script>
+</body>
+</html>

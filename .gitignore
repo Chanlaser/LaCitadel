@@ -1,0 +1,29 @@
+# Dependencies (huge, and contains the hand-placed Electron binary — never publish)
+node_modules/
+
+# Build output
+dist/
+build/
+
+# The backup file still contains the old Valve hero art — keep it private
+index.BACKUP.html
+src/index.BACKUP.html
+
+# Electron local provisioning workarounds (machine-specific, not for sharing)
+electron-backup/
+**/electron/dist/
+**/electron/path.txt
+
+# OS / editor junk
+.DS_Store
+Thumbs.db
+*.log
+.vscode/
+.idea/
+
+# Local environment / secrets (if you ever add any)
+.env
+.env.*
+*.key
+*.pem
+secrets.json

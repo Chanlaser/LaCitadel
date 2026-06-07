@@ -1,0 +1,77 @@
+{
+  "name": "lacitadel",
+  "version": "1.0.0",
+  "description": "Deadlock community stats dashboard \u2014 open project, free forever",
+  "main": "main.js",
+  "homepage": "./",
+  "scripts": {
+    "start": "electron .",
+    "build-win": "electron-builder --win --x64",
+    "build-mac": "electron-builder --mac",
+    "build-linux": "electron-builder --linux",
+    "postinstall": "node -e \"const fs=require('fs'),path=require('path');const pt=path.join('node_modules','electron','path.txt');if(fs.existsSync(pt))fs.writeFileSync(pt,'electron.exe');\"",
+    "fix-electron": "node -e \"require('fs').writeFileSync('node_modules/electron/path.txt','electron.exe')\""
+  },
+  "build": {
+    "appId": "gg.preciogamer.deadlock-dashboard",
+    "productName": "LaCitadel",
+    "copyright": "Open Community Project \u2014 Never Do Evil, Never Break Valve TOS",
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "assets/icon.ico"
+    },
+    "mac": {
+      "target": "dmg",
+      "icon": "assets/icon.icns"
+    },
+    "linux": {
+      "target": "AppImage",
+      "icon": "assets/icon.png"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "installerIcon": "assets/icon.ico",
+      "installerHeaderIcon": "assets/icon.ico",
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "LaCitadel",
+      "deleteAppDataOnUninstall": false
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "src/**/*",
+      "assets/**/*"
+    ],
+    "directories": {
+      "output": "dist"
+    },
+    "publish": {
+      "provider": "github",
+      "owner": "chanlaser",
+      "repo": "lacitadel"
+    }
+  },
+  "keywords": [
+    "deadlock",
+    "valve",
+    "stats",
+    "gaming",
+    "dashboard"
+  ],
+  "author": "Chanlaser \u2014 open community project",
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^31.0.0",
+    "electron-builder": "^24.0.0",
+    "electron-updater": "^6.1.0"
+  }
+}
