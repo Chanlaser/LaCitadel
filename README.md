@@ -27,7 +27,7 @@ No es perfecta y la sigo puliendo poco a poco, pero hace lo que necesito y esper
 - **Clasificación** — leaderboards por región (Suramérica, Norteamérica, Europa, Asia, Oceanía), con los héroes principales de cada jugador.
 - **Errores / Logs** — una pestaña para ver qué pasó si algo falla. Si encuentras un bug, le das a "Copiar sesión" y me lo mandas. Así arreglo las cosas más rápido.
 
-Todo en **español**.
+Todo en **español por defecto**, con un botón para cambiar a inglés si lo prefieres.
 
 ---
 

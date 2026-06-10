@@ -476,12 +476,26 @@ async function fetchPatchNotes(){
   try{
     const res = await fetchUrl('https://api.deadlock-api.com/v1/patches', {timeout:12000});
     const data = JSON.parse(res.body);
-    return (Array.isArray(data)?data:data.patches||[]).slice(0,10).map(p=>({
-      name:    p.patch_name||p.name||p.version||'',
-      date:    p.patch_date||p.date||p.created_at?.slice(0,10)||'',
-      summary: p.summary||p.description||p.notes||'',
-      url:     p.url||p.link||'https://deadlock-api.com/patches',
-    }));
+    const arr = Array.isArray(data) ? data : (data.patches||[]);
+    // Real shape (patch-check, Jun 2026): RSS del foro oficial —
+    // {title, pub_date, link, content_encoded (HTML), author, ...}
+    return arr.slice(0,10).map(p=>{
+      // Sacar un resumen legible del HTML del foro
+      let summary = '';
+      const html = p.content_encoded || '';
+      const snip = html.match(/contentRow-snippet[^>]*>([\s\S]*?)<\/div>/);
+      summary = (snip ? snip[1] : html)
+        .replace(/<[^>]+>/g,' ')
+        .replace(/&gt;/g,'>').replace(/&lt;/g,'<').replace(/&amp;/g,'&')
+        .replace(/&quot;/g,'"').replace(/&#0?39;/g,"'").replace(/&nbsp;/g,' ')
+        .replace(/\s+/g,' ').trim().slice(0,400);
+      return {
+        name:    p.title || p.patch_name || p.name || p.version || '',
+        date:    (p.pub_date || p.patch_date || p.date || '').slice(0,10),
+        summary: summary,
+        url:     p.link || p.url || 'https://forums.playdeadlock.com/forums/changelog.10/',
+      };
+    });
   }catch(e){ return []; }
 }
 

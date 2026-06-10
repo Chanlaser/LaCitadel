@@ -1,6 +1,6 @@
 {
   "name": "lacitadel",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Deadlock community stats dashboard \u2014 open project, free forever",
   "main": "main.js",
   "homepage": "./",
@@ -56,8 +56,8 @@
     },
     "publish": {
       "provider": "github",
-      "owner": "chanlaser",
-      "repo": "lacitadel"
+      "owner": "Chanlaser",
+      "repo": "LaCitadel"
     }
   },
   "keywords": [
