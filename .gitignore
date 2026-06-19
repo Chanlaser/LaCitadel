@@ -1,6 +1,22 @@
 # Dependencies (huge, and contains the hand-placed Electron binary — never publish)
 node_modules/
 
+# Local diagnostic / probe scripts — one-off read-only tools, not part of the app
+badge-test.js
+counter-check.js
+hero-stats-probe.js
+id-compare.js
+maxts-probe.js
+patches-list-probe.js
+patchwindow-probe.js
+rank-map.js
+sample-size.js
+steam-news-probe.js
+trace-slug.js
+url-probe.js
+api-check.js
+patch-check.js
+
 # Build output
 dist/
 build/
