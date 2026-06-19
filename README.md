@@ -66,7 +66,14 @@ Abre un [issue](https://github.com/chanlaser/lacitadel/issues) o, si eres de la 
 
 ## Licencia
 
-MIT. Haz lo que quieras con esto, solo deja el crédito. Mira el archivo [LICENSE](LICENSE) para los detalles.
+**El código** es MIT. Haz lo que quieras con él, solo deja el crédito. Mira el archivo [LICENSE](LICENSE) para los detalles.
+
+**El arte NO es MIT.** El logo, el banner y los íconos (todo lo que está en `assets/`) son obra del artista gráfico **Pocket** (Discord: `lockjacket2199`) con todos los derechos cedidos a Chanlaser. © Todos los derechos reservados — no se pueden reusar, modificar ni redistribuir fuera de esta app sin permiso.
+
+## Créditos
+
+- **Arte y branding:** Pocket (Discord: `lockjacket2199`) — logo, banner e identidad visual de LaCitadel 🎨
+- **Data:** [deadlock-api.com](https://deadlock-api.com), proyecto comunitario open source
 
 ---
 

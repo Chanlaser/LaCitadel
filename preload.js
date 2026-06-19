@@ -3,7 +3,7 @@ const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('api', {
   // Data fetching
-  fetchHeroStats:   (badge)         => ipcRenderer.invoke('fetch-hero-stats',  badge),
+  fetchHeroStats:   (...args)       => ipcRenderer.invoke('fetch-hero-stats',  ...args),
   fetchHeroBuild:   (heroId)        => ipcRenderer.invoke('fetch-hero-build',  heroId),
   fetchItemStats:   (heroId, badge) => ipcRenderer.invoke('fetch-item-stats',  heroId, badge),
   fetchLeaderboard: (region, badge) => ipcRenderer.invoke('fetch-leaderboard', region, badge),

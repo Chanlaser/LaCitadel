@@ -11,11 +11,11 @@
 <title>LaCitadel — Deadlock Stats</title>
 <style>
 :root{
-  --bg:#0b0b0e;--surface:#16161b;--surface2:#1e1e25;--surface3:#26262f;
-  --border:rgba(255,255,255,0.07);--border2:rgba(255,255,255,0.13);
-  --text:#ededf0;--muted:#7a7a88;--hint:#3e3e4a;
-  --accent:#fa4454;--green:#34d399;--amber:#fbbf24;--blue:#60a5fa;--red:#f87171;
-  --a1:#f472b6;--a2:#38bdf8;--a3:#a78bfa;--aR:#fbbf24;
+  --bg:#14110b;--surface:#1d1810;--surface2:#241e13;--surface3:#322a1c;
+  --border:rgba(230,173,62,0.10);--border2:rgba(230,173,62,0.20);
+  --text:#f2e8d4;--muted:#a89878;--hint:#6b6048;
+  --accent:#e6ad3e;--green:#4cc66a;--amber:#e6ad3e;--blue:#5a96e0;--red:#e2554d;
+  --a1:#f472b6;--a2:#38bdf8;--a3:#a78bfa;--aR:#e6ad3e;
 }
 *{box-sizing:border-box;margin:0;padding:0;}
 html,body{height:100%;overflow:hidden;}
@@ -32,6 +32,10 @@ header{padding:10px 18px;border-bottom:1px solid var(--border);display:flex;alig
 .upd-btn{background:rgba(52,211,153,.1);border:1px solid rgba(52,211,153,.3);color:var(--green);border-radius:5px;padding:4px 13px;font-size:11px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:5px;}
 .upd-btn:hover{background:rgba(52,211,153,.18);}
 .upd-btn.loading{opacity:.55;cursor:not-allowed;pointer-events:none;}
+@keyframes patchPulse{0%,100%{box-shadow:0 0 0 0 rgba(230,173,62,.0);border-color:rgba(52,211,153,.3);}50%{box-shadow:0 0 9px 2px rgba(230,173,62,.65);border-color:var(--accent);}}
+.upd-btn.patch-flash{animation:patchPulse 1.25s ease-in-out infinite;color:var(--accent);background:rgba(230,173,62,.12);}
+@keyframes badgePulse{0%,100%{opacity:1;}50%{opacity:.35;}}
+#patchNewBadge.flashing{animation:badgePulse 1s ease-in-out infinite;}
 .spin{display:inline-block;animation:spin .7s linear infinite;}
 @keyframes spin{to{transform:rotate(360deg);}}
 .pbadge{background:var(--surface2);border:1px solid var(--border);padding:3px 10px;border-radius:20px;font-size:10px;color:var(--muted);}
@@ -47,7 +51,7 @@ header{padding:10px 18px;border-bottom:1px solid var(--border);display:flex;alig
 .sb-list{flex:1;overflow-y:auto;padding:4px;}
 .hi{display:flex;align-items:center;gap:7px;padding:5px 6px;border-radius:6px;cursor:pointer;border:1px solid transparent;transition:background .1s;}
 .hi:hover{background:var(--surface2);}
-.hi.active{background:rgba(250,68,84,.09);border-color:rgba(250,68,84,.18);}
+.hi.active{background:rgba(230,173,62,.10);border-color:rgba(230,173,62,.22);}
 .hi-img{width:32px;height:32px;border-radius:50%;overflow:hidden;flex-shrink:0;border:1.5px solid var(--border);}
 .hi-img img{width:100%;height:100%;object-fit:cover;object-position:top;}
 .hi-body{flex:1;min-width:0;}
@@ -71,7 +75,7 @@ header{padding:10px 18px;border-bottom:1px solid var(--border);display:flex;alig
 .home-hdr p{font-size:12px;color:var(--muted);}
 .tier-group{margin-bottom:16px;}
 .tier-lbl{font-size:10px;text-transform:uppercase;letter-spacing:.08em;font-weight:700;margin-bottom:7px;display:flex;align-items:center;gap:8px;}
-.tl-S{color:#fbbf24;}.tl-A{color:#34d399;}.tl-B{color:#60a5fa;}.tl-C{color:#f87171;}.tl-D{color:#7a7a88;}
+.tl-S{color:#f0c563;}.tl-A{color:#34c19a;}.tl-B{color:#5a96e0;}.tl-C{color:#e2554d;}.tl-D{color:#a89878;}
 .tier-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:7px;}
 /* ── TIER LIST VIEW (v1.1) ── */
 .tlv-row{display:flex;align-items:stretch;margin-bottom:10px;border:1px solid var(--border);border-radius:10px;overflow:hidden;background:var(--surface2);}
@@ -278,11 +282,12 @@ tr.hl td:first-child{border-left:2px solid rgba(52,211,153,.28);padding-left:6px
 .upd-close.show{display:inline-block;}
 .upd-progress{height:3px;background:var(--surface2);border-radius:2px;margin-bottom:16px;overflow:hidden;}
 .upd-progress-bar{height:100%;background:var(--green);border-radius:2px;transition:width .4s;}
-.app-update-bar{display:none;background:rgba(250,68,84,.1);border-bottom:1px solid rgba(250,68,84,.3);padding:6px 18px;align-items:center;gap:10px;font-size:11px;color:#fa8080;cursor:pointer;}
+.app-update-bar{display:none;background:rgba(230,173,62,.10);border-bottom:1px solid rgba(230,173,62,.3);padding:6px 18px;align-items:center;gap:10px;font-size:11px;color:#f0c563;cursor:pointer;}
 .app-update-bar.show{display:flex;}
-.hero-banner{width:100%;height:180px;object-fit:cover;object-position:center 20%;display:block;flex-shrink:0;}
-.app-update-bar strong{color:#fa4454;}
-.app-update-bar .upd-action{background:#fa4454;color:#fff;border:none;border-radius:4px;padding:3px 12px;font-size:11px;font-weight:700;cursor:pointer;margin-left:auto;flex-shrink:0;}
+.hero-banner{width:100%;aspect-ratio:3200/600;height:auto;object-fit:cover;display:block;flex-shrink:0;}
+.hero-banner-ph{width:100%;height:62px;display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--hint);border-bottom:1px solid var(--border);background:repeating-linear-gradient(45deg,rgba(230,173,62,.05),rgba(230,173,62,.05) 10px,transparent 10px,transparent 20px);}
+.app-update-bar strong{color:#e6ad3e;}
+.app-update-bar .upd-action{background:#e6ad3e;color:#14110b;border:none;border-radius:4px;padding:3px 12px;font-size:11px;font-weight:700;cursor:pointer;margin-left:auto;flex-shrink:0;}
 .app-update-bar .upd-dismiss{color:#7a7a88;font-size:18px;cursor:pointer;line-height:1;flex-shrink:0;}
 .rank-dot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:4px;vertical-align:middle;}
 .nav-tabs{display:flex;gap:1px;padding:0 18px;background:var(--surface);border-bottom:1px solid var(--border);}
@@ -317,35 +322,35 @@ tr.hl td:first-child{border-left:2px solid rgba(52,211,153,.28);padding-left:6px
 .tos-modal{background:#16161b;border:1px solid rgba(255,255,255,0.13);border-radius:12px;width:540px;max-width:95vw;max-height:90vh;display:flex;flex-direction:column;overflow:hidden;}
 .tos-header{padding:18px 22px 14px;border-bottom:1px solid rgba(255,255,255,0.07);flex-shrink:0;}
 .tos-logo{display:flex;align-items:center;gap:9px;margin-bottom:10px;}
-.tos-logo-sq{width:28px;height:28px;background:#fa4454;border-radius:6px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:12px;color:#fff;flex-shrink:0;}
+.tos-logo-sq{width:28px;height:28px;background:#e6ad3e;border-radius:6px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:12px;color:#14110b;flex-shrink:0;}
 .tos-title{font-size:13px;font-weight:600;color:#ededf0;margin-bottom:2px;}
 .tos-sub{font-size:11px;color:#7a7a88;}
 .tos-lang{display:flex;gap:6px;margin-bottom:12px;}
 .tos-lb{background:#1e1e25;border:1px solid rgba(255,255,255,0.08);color:#7a7a88;border-radius:4px;padding:3px 11px;font-size:10px;cursor:pointer;}
-.tos-lb.on{border-color:#fa4454;color:#fa4454;background:rgba(250,68,84,.08);}
+.tos-lb.on{border-color:#e6ad3e;color:#f0c563;background:rgba(230,173,62,.10);}
 .tos-body{padding:14px 22px;overflow-y:auto;flex:1;}
 .tos-body::-webkit-scrollbar{width:3px;}
 .tos-body::-webkit-scrollbar-thumb{background:#26262f;border-radius:2px;}
 .tos-sec{margin-bottom:13px;}
 .tos-sec h3{font-size:11px;font-weight:600;color:#c8c8d0;margin-bottom:4px;}
 .tos-sec p{font-size:11px;color:#7a7a88;line-height:1.75;}
-.tos-hbox{background:#1e1e25;border-left:2px solid #fa4454;border-radius:0 5px 5px 0;padding:9px 12px;margin:10px 0;}
+.tos-hbox{background:#241e13;border-left:2px solid #e6ad3e;border-radius:0 5px 5px 0;padding:9px 12px;margin:10px 0;}
 .tos-hbox p{font-size:11px;color:#c8c8d0;line-height:1.75;}
 .tos-ibox{background:rgba(96,165,250,.06);border-left:2px solid rgba(96,165,250,.4);border-radius:0 5px 5px 0;padding:9px 12px;margin:10px 0;}
 .tos-ibox p{font-size:11px;color:#93c5fd;line-height:1.75;}
 .tos-footer{padding:14px 22px;border-top:1px solid rgba(255,255,255,0.07);display:flex;flex-direction:column;gap:9px;flex-shrink:0;}
 .tos-crow{display:flex;align-items:flex-start;gap:8px;cursor:pointer;user-select:none;}
 .tos-cb{width:15px;height:15px;border:1px solid rgba(255,255,255,0.2);border-radius:3px;background:#1e1e25;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px;font-size:10px;color:#fff;}
-.tos-cb.on{background:#fa4454;border-color:#fa4454;}
+.tos-cb.on{background:#e6ad3e;border-color:#e6ad3e;}
 .tos-crow span{font-size:11px;color:#7a7a88;line-height:1.5;}
 .tos-brow{display:flex;gap:8px;}
 .tos-decline{flex:1;background:transparent;border:1px solid rgba(255,255,255,0.1);color:#7a7a88;border-radius:6px;padding:8px;font-size:12px;cursor:pointer;text-align:center;}
 .tos-decline:hover{background:var(--surface2);}
-.tos-accept{flex:2;background:#fa4454;border:none;color:#fff;border-radius:6px;padding:9px;font-size:12px;font-weight:700;cursor:pointer;text-align:center;opacity:.5;pointer-events:none;}
+.tos-accept{flex:2;background:#e6ad3e;border:none;color:#14110b;border-radius:6px;padding:9px;font-size:12px;font-weight:700;cursor:pointer;text-align:center;opacity:.5;pointer-events:none;}
 .tos-accept.enabled{opacity:1;pointer-events:all;}
 .tos-accept.enabled:hover{background:#e03344;}
 .tos-vnote{font-size:9px;color:#3e3e4a;text-align:center;}
-.tos-tag{display:inline-block;background:rgba(250,68,84,.1);color:#fa8080;border-radius:3px;padding:1px 5px;font-size:9px;font-weight:600;margin-left:4px;}
+.tos-tag{display:inline-block;background:rgba(230,173,62,.12);color:#f0c563;border-radius:3px;padding:1px 5px;font-size:9px;font-weight:600;margin-left:4px;}
 .langpill{display:inline-flex;align-items:center;gap:4px;background:var(--surface2);border:1px solid var(--border);border-radius:5px;padding:3px 8px;font-size:11px;font-weight:700;user-select:none;}.langpill .lp-opt{cursor:pointer;color:var(--hint);transition:color .15s;}.langpill .lp-opt:hover{color:var(--text);}.langpill .lp-opt.on{color:var(--green);}.langpill .lp-sep{color:var(--border);}
 </style>
 </head>
@@ -356,7 +361,7 @@ tr.hl td:first-child{border-left:2px solid rgba(52,211,153,.28);padding-left:6px
     <div class="tos-header">
       <div class="tos-logo" style="display:flex;align-items:center;justify-content:space-between;width:100%">
         <div style="display:flex;align-items:center;gap:8px">
-          <div class="tos-logo-sq">LC</div>
+          <img class="tos-logo-sq" src="../assets/logo-lc.png" alt="LC" style="background:transparent">
           <span style="font-size:15px;font-weight:700;color:#ededf0">LaCitadel</span>
         </div>
         <div class="langpill" id="tosLangPill" title="Idioma / Language">
@@ -366,16 +371,16 @@ tr.hl td:first-child{border-left:2px solid rgba(52,211,153,.28);padding-left:6px
         </div>
       </div>
       <div class="tos-title" id="tosTitle">Aviso Legal y Términos de Uso</div>
-      <div class="tos-sub" id="tosSub">Lee antes de continuar · v1.0.0</div>
+      <div class="tos-sub" id="tosSub">Lee antes de continuar · v1.0.2</div>
     </div>
     <div class="tos-body">
       <!-- SPANISH -->
       <div id="tosEs">
         <div class="tos-hbox"><p>Al usar LaCitadel aceptas estos terminos en su totalidad. Si no estas de acuerdo, cierra la aplicacion.</p></div>
-        <div class="tos-sec"><h3>1. Naturaleza del software</h3><p>LaCitadel es una herramienta de estadisticas creada de forma independiente por un desarrollador individual. No esta afiliada, patrocinada ni aprobada por Valve Corporation ni por ninguna otra empresa. Es de uso gratuito y siempre lo sera.</p></div>
+        <div class="tos-sec"><h3>1. Naturaleza del software</h3><p>LaCitadel es una herramienta de estadisticas creada de forma independiente por un desarrollador individual. No esta afiliada, patrocinada ni aprobada por Valve Corporation ni por ninguna otra empresa. Es de uso gratuito. El creador se reserva el derecho de transferir, vender o ceder el proyecto y todos sus activos a un tercero en el futuro; cualquier sucesor quedara sujeto a estos terminos.</p></div>
         <div class="tos-sec"><h3>2. Limitacion de responsabilidad <span class="tos-tag">IMPORTANTE</span></h3><p>LaCitadel, su creador y cualquier entidad futura asociada al proyecto no asumen ninguna responsabilidad por danos directos, indirectos, accidentales o consecuentes que puedan derivarse del uso o la imposibilidad de uso de esta aplicacion. El uso es estrictamente bajo tu propia responsabilidad.</p></div>
         <div class="tos-sec"><h3>3. Exactitud de la informacion</h3><p>Los datos mostrados provienen de fuentes publicas de la comunidad y pueden contener errores, retrasos o imprecisiones. No garantizamos la exactitud, completitud ni vigencia de la informacion en ningun momento.</p></div>
-        <div class="tos-sec"><h3>4. Privacidad y datos personales</h3><p>Esta aplicacion no recopila, almacena ni transmite datos personales a ningun servidor externo. Toda la informacion se guarda unicamente en tu dispositivo. No hay cuentas de usuario, no hay rastreo, no hay publicidad personalizada.</p></div>
+        <div class="tos-sec"><h3>4. Privacidad y datos personales</h3><p>LaCitadel no requiere cuentas de usuario y no recopila datos personales identificables como tu nombre, correo o telefono. Las estadisticas de heroes se guardan en tu dispositivo. Las funciones de la comunidad (por ejemplo, las encuestas) envian a nuestro servidor unicamente votos anonimos asociados a un identificador aleatorio del dispositivo, junto con datos tecnicos basicos y agregados (como conteos totales y region general) que sirven para evitar votos duplicados, mostrar resultados y mejorar la herramienta. Nunca vendemos datos personales identificables. No hay publicidad personalizada. La participacion en las funciones de la comunidad es voluntaria.</p></div>
         <div class="tos-sec"><h3>5. Propiedad intelectual</h3><p>Deadlock, sus personajes, imagenes, nombres y cualquier contenido relacionado son propiedad exclusiva de Valve Corporation. LaCitadel no reclama derechos sobre ninguno de estos activos. Todas las marcas pertenecen a sus respectivos duenos.</p></div>
         <div class="tos-sec"><h3>6. Donaciones voluntarias</h3><p>Las donaciones son completamente voluntarias y sirven unicamente para apoyar el desarrollo y mantenimiento de la herramienta. No garantizan ningun servicio, beneficio, acceso exclusivo ni compensacion de ningun tipo. No son reembolsables.</p></div>
         <div class="tos-sec"><h3>7. Actividades futuras del desarrollador</h3><p>El creador de LaCitadel se reserva el derecho de desarrollar otros productos, servicios o empresas en el futuro, relacionados o no con este software. Dichas actividades son completamente independientes y no estan cubiertas por estos terminos.</p></div>
@@ -385,10 +390,10 @@ tr.hl td:first-child{border-left:2px solid rgba(52,211,153,.28);padding-left:6px
       <!-- ENGLISH -->
       <div id="tosEn" style="display:none">
         <div class="tos-hbox"><p>By using LaCitadel you accept these terms in full. If you do not agree, close the application.</p></div>
-        <div class="tos-sec"><h3>1. Nature of the software</h3><p>LaCitadel is a statistics tool built independently by a single developer. It is not affiliated with, sponsored by, or endorsed by Valve Corporation or any other company. It is free to use and always will be.</p></div>
+        <div class="tos-sec"><h3>1. Nature of the software</h3><p>LaCitadel is a statistics tool built independently by a single developer. It is not affiliated with, sponsored by, or endorsed by Valve Corporation or any other company. It is free to use. The creator reserves the right to transfer, sell, or assign the project and all of its assets to a third party in the future; any successor will be bound by these terms.</p></div>
         <div class="tos-sec"><h3>2. Limitation of liability <span class="tos-tag">IMPORTANT</span></h3><p>LaCitadel, its creator, and any future entity associated with the project assume no responsibility for direct, indirect, incidental, or consequential damages arising from the use or inability to use this application. Use is strictly at your own risk.</p></div>
         <div class="tos-sec"><h3>3. Accuracy of information</h3><p>The data shown comes from public community sources and may contain errors, delays, or inaccuracies. We do not guarantee the accuracy, completeness, or timeliness of the information at any time.</p></div>
-        <div class="tos-sec"><h3>4. Privacy and personal data</h3><p>This application does not collect, store, or transmit personal data to any external server. All information is saved only on your device. There are no user accounts, no tracking, no personalized advertising.</p></div>
+        <div class="tos-sec"><h3>4. Privacy and personal data</h3><p>LaCitadel requires no user accounts and does not collect identifiable personal data such as your name, email, or phone number. Hero statistics are stored on your device. Community features (for example, the polls) send only anonymous votes tied to a random device identifier to our server, together with basic, aggregate technical data (such as total counts and general region) used to prevent duplicate votes, display results, and improve the tool. We never sell identifiable personal data. There is no personalized advertising. Participation in community features is voluntary.</p></div>
         <div class="tos-sec"><h3>5. Intellectual property</h3><p>Deadlock, its characters, images, names, and any related content are the exclusive property of Valve Corporation. LaCitadel claims no rights over any of these assets. All trademarks belong to their respective owners.</p></div>
         <div class="tos-sec"><h3>6. Voluntary donations</h3><p>Donations are entirely voluntary and serve only to support the development and maintenance of the tool. They guarantee no service, benefit, exclusive access, or compensation of any kind. They are non-refundable.</p></div>
         <div class="tos-sec"><h3>7. Future activities of the developer</h3><p>The creator of LaCitadel reserves the right to develop other products, services, or businesses in the future, whether or not related to this software. Such activities are entirely independent and are not covered by these terms.</p></div>
@@ -409,13 +414,13 @@ tr.hl td:first-child{border-left:2px solid rgba(52,211,153,.28);padding-left:6px
         <div class="tos-decline" id="tosDeclineBtn" onclick="tosDecline()">Salir</div>
         <div class="tos-accept" id="tosAcceptBtn" onclick="tosAccept()">Acepto y Continúo</div>
       </div>
-      <div class="tos-vnote" id="tosVnote">LaCitadel v1.0.0 · Chanlaser · Términos actualizados: 2026-05-26</div>
+      <div class="tos-vnote" id="tosVnote">LaCitadel v1.0.2 · Chanlaser · Términos actualizados: 2026-06-14</div>
     </div>
   </div>
 </div>
 
 <header>
-  <div class="logo">DL</div>
+  <img class="logo" src="../assets/logo-lc.png" alt="LC" style="background:transparent">
   <div class="htxt"><h1>LaCitadel</h1><p id="appSub">Deadlock Stats · Builds · Héroes · Habilidades</p></div>
   <div class="hright">
 
@@ -425,12 +430,13 @@ tr.hl td:first-child{border-left:2px solid rgba(52,211,153,.28);padding-left:6px
       <span id="langEn" class="lp-opt" onclick="setLang('en')">EN</span>
     </div>
     <span class="pbadge" id="patchLabel">—</span>
+    <select id="patchSel" title="Parche / Patch" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:5px;padding:3px 8px;font-size:11px;cursor:pointer;outline:none;max-width:150px;" onchange="selectPatch(this.value)"></select>
     <select id="rankSel" title="Rank filter — applied when pressing Update" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:5px;padding:3px 8px;font-size:11px;cursor:pointer;outline:none;max-width:160px;" onchange="setRank(this.value)"></select>
     <button class="upd-btn" id="updateBtn" onclick="runUpdate()">↻ Actualizar Todo</button>
   </div>
 </header>
 
-<img id="heroBanner" class="hero-banner" src="assets/header-wip-es.png" alt="Header en construccion">
+<img id="heroBanner" class="hero-banner" src="../assets/header-lacitadel-strip.jpg" alt="LaCitadel" onerror="bannerErr(this)">
 <div class="app-update-bar" id="appUpdateBar" onclick="handleUpdateClick()">
   <span id="appUpdateMsg">⬆ <strong>Nueva versión disponible</strong> · Pending update — <span id="appUpdateVersion"></span></span>
   <span id="appUpdateProgress" style="display:none;color:var(--green)">Descargando... <span id="appUpdatePct">0</span>%</span>
@@ -440,11 +446,12 @@ tr.hl td:first-child{border-left:2px solid rgba(52,211,153,.28);padding-left:6px
 
 <div class="nav-tabs" id="navTabs">
   <div class="nav-tab active" id="nav-roster"  onclick="setNav('roster')">🎮 <span id="nt-roster">Plantel</span></div>
-  <div class="nav-tab"        id="nav-tierlist" onclick="setNav('tierlist')">📊 <span id="nt-tierlist">Tier List</span></div>
+  <div class="nav-tab"        id="nav-polls"    onclick="setNav('polls')">🗳️ <span id="nt-polls">Encuestas</span></div>
   <div class="nav-tab"        id="nav-lb"       onclick="setNav('lb')">🏆 <span id="nt-lb">Clasificación</span></div>
-  <div class="nav-tab"        id="nav-patch"    onclick="setNav('patch')">📋 <span id="nt-patch">Parches</span></div>
+  <div class="nav-tab"        id="nav-patch"    onclick="setNav('patch')">📋 <span id="nt-patch">Parches</span><span id="patchNewBadge" style="display:none;font-size:8px;font-weight:800;color:#14110b;background:var(--accent);border-radius:5px;padding:1px 5px;margin-left:5px;vertical-align:middle;letter-spacing:.03em">NUEVO</span></div>
   <div class="nav-tab"        id="nav-map"      onclick="setNav('map')">🗺️ <span id="nt-map">Datos del Mapa</span></div>
   <div class="nav-tab"        id="nav-logs"     onclick="setNav('logs')">🔍 <span id="nt-logs">Errores</span></div>
+  <div class="nav-tab"        id="nav-socials"  onclick="setNav('socials')">🔗 <span id="nt-socials">Sociales</span></div>
 </div>
 <div class="layout">
   <div class="sidebar">
@@ -558,8 +565,10 @@ const I18N = {
     navRoster: 'Plantel',
     navLeaderboard: 'Clasificación',
     navPatch: 'Parches',
+    navPolls: 'Encuestas',
     navMapData: 'Datos del Mapa',
     navLogs: 'Errores',
+    navSocials: 'Sociales',
     heroRoster: 'Plantel de Héroes',
     heroCount: 'héroes',
     homeLivePrefix: 'En vivo · ',
@@ -582,6 +591,7 @@ const I18N = {
     patchNotesEmpty: 'No se pudieron cargar las notas de parche. Presiona ↻ Recargar para intentar de nuevo.',
     patchNotesBrowser: 'Las notas de parche en vivo requieren la app de escritorio.',
     patchRefresh: '↻ Recargar',
+    patchRefreshHint: '¿Salió un parche nuevo? Presiona Recargar para ver los últimos cambios.',
     patchReadMore: 'Leer completo →',
     playersSuffix: ' jugadores ✓',
     updatedColon: 'Actualizado: ',
@@ -628,12 +638,11 @@ const I18N = {
     sumSaved: 'Guardado: ',
     mapWhyTitle: 'ℹ️ ¿Por qué los datos del mapa no están disponibles aún?',
     mapWhyBody: 'Los datos del mapa requieren el mapa de calor de deadlock-api.com, que utiliza renderizado en el lado del cliente (JavaScript genera el mapa visualmente). Esto no se puede obtener con scraping básico.<br><br><strong>La Aplicación de Escritorio podrá:</strong><br>- Usar la API directamente sin restricciones CORS<br>- Renderizar el mapa de calor de muertes con datos reales<br>- Filtrar por fase del juego, héroe y rango<br>- Superponer información de objetivos sobre el mapa<br>- Mostrar cambios entre parches (antes vs ahora)',
+    mapDisclaimer: '⚠️ Aviso: esta pestaña todavía no muestra datos reales. Los datos del mapa (mapa de calor de muertes y objetivos) dependen de una fuente externa que hoy no ofrece esa información de forma estable para esta app; por eso ves tarjetas de ejemplo marcadas como "Disponible en App". Si no encontramos una fuente de datos confiable, esta sección podría cambiar o eliminarse en una versión futura.',
     logNoRecords: 'Sin registros aún',
     logNoRecordsBody: 'Los errores y resultados de cada actualización aparecerán aquí. Presiona ↻ Actualizar Todo para comenzar.',
     logHistoryPre: 'Historial de las últimas ',
     logHistoryPost: ' actualizaciones. Copia el log completo para reportar errores.',
-    gaiusQuote: '¡Qué devastación... Esta no era mi intención!',
-    gaiusAttrib: '— Gaius van Baelsar, Final Fantasy XIV · A Realm Reborn',
     dataSafe: 'Tus datos anteriores están seguros. Verifica tu conexión e intenta de nuevo.',
     mapCardDeathTitle: '💀 Mapa de calor de muertes',
     mapCardDeathSub: 'Zonas donde los jugadores mueren con más frecuencia',
@@ -731,12 +740,12 @@ const I18N = {
     updateComplete: 'Actualización completa',
     // TOS
     tosTitle: 'Aviso Legal y Términos de Uso',
-    tosSub: 'Lee antes de continuar · v1.0.0',
+    tosSub: 'Lee antes de continuar · v1.0.2',
     tosAcceptCheck: 'He leído y acepto todos los términos',
     tosNoShow: 'No volver a mostrar en este dispositivo',
     tosExit: 'Salir',
     tosAcceptBtn: 'Acepto y Continúo',
-    tosVnote: 'LaCitadel v1.0.0 · Chanlaser · Términos actualizados: 2026-05-26',
+    tosVnote: 'LaCitadel v1.0.2 · Chanlaser · Términos actualizados: 2026-06-14',
     tosMustAccept: 'Debes aceptar los términos para usar LaCitadel.'
   },
   en: {
@@ -749,8 +758,10 @@ const I18N = {
     navRoster: 'Roster',
     navLeaderboard: 'Leaderboard',
     navPatch: 'Patches',
+    navPolls: 'Polls',
     navMapData: 'Map Data',
     navLogs: 'Errors',
+    navSocials: 'Socials',
     heroRoster: 'Hero Roster',
     heroCount: 'heroes',
     homeLivePrefix: 'Live · ',
@@ -773,6 +784,7 @@ const I18N = {
     patchNotesEmpty: 'Patch notes could not be loaded. Press ↻ Reload to try again.',
     patchNotesBrowser: 'Live patch notes require the desktop app.',
     patchRefresh: '↻ Reload',
+    patchRefreshHint: 'New patch out? Press Reload to see the latest changes.',
     patchReadMore: 'Read full →',
     playersSuffix: ' players ✓',
     updatedColon: 'Updated: ',
@@ -819,12 +831,11 @@ const I18N = {
     sumSaved: 'Saved: ',
     mapWhyTitle: 'ℹ️ Why isn\'t map data available yet?',
     mapWhyBody: 'Map data requires the deadlock-api.com heatmap, which uses client-side rendering (JavaScript draws the map visually). This can\'t be obtained with basic scraping.<br><br><strong>The Desktop App will be able to:</strong><br>- Use the API directly without CORS restrictions<br>- Render the kill heatmap with real data<br>- Filter by game phase, hero and rank<br>- Overlay objective info on the map<br>- Show changes between patches (before vs after)',
+    mapDisclaimer: '⚠️ Notice: this tab does not show real data yet. Map data (kill heatmaps and objectives) relies on an external source that currently does not provide that information reliably for this app, which is why you see example cards marked "Available in App". If no dependable data source is found, this section may change or be removed in a future version.',
     logNoRecords: 'No records yet',
     logNoRecordsBody: 'Errors and results from each update will appear here. Press ↻ Update All to begin.',
     logHistoryPre: 'History of the last ',
     logHistoryPost: ' updates. Copy the full log to report errors.',
-    gaiusQuote: 'How devastating... This was not my intention!',
-    gaiusAttrib: '— Gaius van Baelsar, Final Fantasy XIV · A Realm Reborn',
     dataSafe: 'Your previous data is safe. Check your connection and try again.',
     mapCardDeathTitle: '💀 Kill heatmap',
     mapCardDeathSub: 'Zones where players die most often',
@@ -920,12 +931,12 @@ const I18N = {
     itemsReplaced: 'Per-item win and pick rate replaced',
     updateComplete: 'Update complete',
     tosTitle: 'Legal Notice & Terms of Use',
-    tosSub: 'Read before continuing · v1.0.0',
+    tosSub: 'Read before continuing · v1.0.2',
     tosAcceptCheck: 'I have read and accept all the terms',
     tosNoShow: "Don't show again on this device",
     tosExit: 'Exit',
     tosAcceptBtn: 'Accept & Continue',
-    tosVnote: 'LaCitadel v1.0.0 · Chanlaser · Terms updated: 2026-05-26',
+    tosVnote: 'LaCitadel v1.0.2 · Chanlaser · Terms updated: 2026-06-14',
     tosMustAccept: 'You must accept the terms to use LaCitadel.'
   }
 };
@@ -983,26 +994,42 @@ function regionLabel(id){ const r=REGIONS.find(x=>x.id===id); return r?(r[LANG]|
 // Each rank has 3 subranks (1,2,3) except Eternus
 const RANKS = [
   { id:'all',      label:'Todos los rangos',       badge:0,   color:'#7a7a88' },
-  { id:'obscurus', label:'Obscurus (Unranked)',      badge:0,   color:'#888892' },
-  { id:'initiate', label:'1 · Initiate',             badge:10,  color:'#a78bfa' },
-  { id:'seeker',   label:'2 · Seeker',               badge:20,  color:'#8b5cf6' },
-  { id:'alchemist',label:'3 · Alchemist',            badge:30,  color:'#7c3aed' },
-  { id:'arcanist', label:'4 · Arcanist',             badge:40,  color:'#6d28d9' },
-  { id:'ritualist',label:'5 · Ritualist',            badge:50,  color:'#2563eb' },
-  { id:'emissary', label:'6 · Emissary',             badge:60,  color:'#1d4ed8' },
-  { id:'archon',   label:'7 · Archon',               badge:70,  color:'#0ea5e9' },
-  { id:'oracle',   label:'8 · Oracle',               badge:80,  color:'#06b6d4' },
-  { id:'phantom',  label:'9 · Phantom',              badge:90,  color:'#10b981' },
-  { id:'ascendant',label:'10 · Ascendant',           badge:100, color:'#f59e0b' },
-  { id:'eternus',  label:'11 · Eternus',             badge:116, color:'#fa4454' },
+  { id:'initiate', label:'Initiate+',                badge:11,  color:'#a78bfa' },
+  { id:'seeker',   label:'Seeker+',                  badge:21,  color:'#8b5cf6' },
+  { id:'alchemist',label:'Alchemist+',               badge:31,  color:'#7c3aed' },
+  { id:'arcanist', label:'Arcanist+',                badge:41,  color:'#6d28d9' },
+  { id:'ritualist',label:'Ritualist+',               badge:51,  color:'#2563eb' },
+  { id:'emissary', label:'Emissary+',                badge:61,  color:'#1d4ed8' },
+  { id:'archon',   label:'Archon+',                  badge:71,  color:'#0ea5e9' },
+  { id:'oracle',   label:'Oracle+',                  badge:81,  color:'#06b6d4' },
+  { id:'phantom',  label:'Phantom+',                 badge:91,  color:'#10b981' },
+  { id:'ascendant',label:'Ascendant+',               badge:101, color:'#f59e0b' },
+  { id:'eternus',  label:'Eternus',                  badge:111, color:'#e6ad3e' },
 ];
-// Default rank filter — Phantom 1+ matches current data
-const DEFAULT_RANK = 'phantom';
+// Default rank filter — ALL ranks = maximum data (1.3M+ matches). Rank filtering
+// is an optional power-user narrowing. Badge scale is tier*10 + subdivision(1-6),
+// e.g. Phantom = 91-96, Eternus = 111-116. (Confirmed via API: badge "9" doesn't
+// exist and silently returned all ranks — that was the old bug.)
+const DEFAULT_RANK = 'all';
 
 function getRank(){ return appData.selectedRank || DEFAULT_RANK; }
-function getRankBadge(){ const r=RANKS.find(x=>x.id===getRank()); return r?r.badge:90; }
-function getRankLabel(){ const r=RANKS.find(x=>x.id===getRank()); return r?r.label:'Phantom 1+'; }
-function getRankColor(){ const r=RANKS.find(x=>x.id===getRank()); return r?r.color:'#10b981'; }
+function getRankBadge(){ const r=RANKS.find(x=>x.id===getRank()); return r?r.badge:0; }
+function rankDisp(r){ return (r && r.id==='all') ? L('Todos los rangos','All ranks') : (r?r.label:L('Todos los rangos','All ranks')); }
+function getRankLabel(){ return rankDisp(RANKS.find(x=>x.id===getRank())); }
+function getRankColor(){ const r=RANKS.find(x=>x.id===getRank()); return r?r.color:'#7a7a88'; }
+
+// Format big match counts compactly: 690107 -> "690K", 1373735 -> "1.4M"
+function fmtCount(n){
+  n = Number(n)||0;
+  if(n>=1e6) return (n/1e6).toFixed(1).replace(/\.0$/,'')+'M';
+  if(n>=1e3) return Math.round(n/1e3)+'K';
+  return ''+n;
+}
+// Total matches across all loaded heroes (sum of appearances ÷ 12 ≈ unique games)
+function totalSampleGames(){
+  const sum=(appData.heroes||[]).reduce((s,h)=>s+(Number(h.matches)||0),0);
+  return Math.round(sum/12);
+}
 
 function hColor(id){let h=0;for(let i=0;i<id.length;i++)h=(h*31+id.charCodeAt(i))&0xffff;return COLORS[h%COLORS.length];}
 function imgP(id){const n=HI[id];return n?IMG_P+n+'_vertical.webp':'';}
@@ -1105,7 +1132,23 @@ let appData={patch:'2026-05-22',updatedAt:null,heroes:[],heroData:{}};
 let selected=null,winsOpen=false,activeTab='build',sortCol='picks',sortDir=-1;
 
 function toId(n){return n.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');}
-function toTier(w){if(w>=.55)return'S';if(w>=.52)return'A';if(w>=.49)return'B';if(w>=.46)return'C';return'D';}
+// ── TIER COMPUTATION ──────────────────────────────────────────────────────────
+// Win rate is shrunk toward 50% based on sample size (empirical-Bayes style),
+// so low-match heroes can't fluke into top tiers. Tier cutoffs then run on the
+// ADJUSTED win rate. K = shrinkage strength (Moderate). Higher K = stricter.
+const TIER_SHRINK_K = 4000;      // ~matches needed before WR is half-trusted
+const LOW_SAMPLE_MATCHES = 2500; // below this, hero is flagged "muestra baja"
+function adjustWr(w, matches){
+  var m = Number(matches) || 0;
+  if(m <= 0) return 0.50;                       // no data → neutral
+  return 0.50 + (w - 0.50) * (m / (m + TIER_SHRINK_K));
+}
+function lowSample(matches){ return (Number(matches)||0) < LOW_SAMPLE_MATCHES; }
+function toTier(w, matches){
+  // matches optional for back-compat; if omitted, no shrinkage (raw cutoffs).
+  var aw = (matches===undefined || matches===null) ? w : adjustWr(w, matches);
+  if(aw>=.54)return'S';if(aw>=.52)return'A';if(aw>=.49)return'B';if(aw>=.47)return'C';return'D';
+}
 function daysSince(d){return Math.floor((Date.now()-new Date(d))/(864e5));}
 function hoursSince(d){return Math.floor((Date.now()-new Date(d))/36e5);}
 
@@ -1158,64 +1201,68 @@ function pick(id){selected=id;winsOpen=false;activeTab='build';renderSB(document
 
 // ── HOME ──────────────────────────────────────────────────────────────────────
 function renderHome(){
-  const tiers=['S','A','B','C','D'];
-  const tColor={S:'tl-S',A:'tl-A',B:'tl-B',C:'tl-C',D:'tl-D'};
-  const wrColor={S:'var(--amber)',A:'var(--green)',B:'var(--blue)',C:'var(--red)',D:'var(--muted)'};
+  renderTierList();
+}
+// ── TIER LIST VIEW (v1.1) ──────────────────────────────────────────────────
+function renderTierList(){
+  const tCol={S:'#e6ad3e',A:'#34c19a',B:'#5a96e0',C:'#e2554d',D:'#a89878'};
   const lu=appData.updatedAt;
-  let html='<div class="home-hdr"><h2>'+t('heroRoster')+'</h2><p>'+appData.heroes.length+' '+t('heroCount')+' · '+t('patchLabel')+' '+appData.patch+' · '+(lu?'<span style="color:var(--green)">'+t('homeLivePrefix')+lu+'</span>':'<span style="color:var(--amber)">'+t('homePressUpdate')+'</span>')+'</p></div>';
-  tiers.forEach(t=>{
-    const g=appData.heroes.filter(h=>h.tier===t); if(!g.length)return;
-    html+='<div class="tier-group"><div class="tier-lbl '+tColor[t]+'">'+t+' TIER <span style="color:var(--hint);font-weight:400">'+g.length+' heroes</span><span style="margin-left:auto;font-size:9px;color:var(--hint)">WR / PR</span></div><div class="tier-grid">';
-    g.forEach(h=>{
-      const init=h.name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
-      const st=heroStatus(h);
-      const hd=appData.heroData[h.id]||{};
-      const hasFull=hd.build&&hd.build.early&&hd.build.early.length;
-      const pipBg={full:'var(--green)',basic:'var(--blue)',new:'var(--amber)',empty:'var(--hint)'}[st]||'var(--hint)';
-      const isNew=h.patched===appData.patch;
-      html+='<div class="hcard" onclick="pick(\''+h.id+'\')">';
-      if(hasFull) html+='<div class="hcard-tag tag-full">DATA</div>';
-      else if(isNew) html+='<div class="hcard-tag tag-new">NEW</div>';
-      html+='<div class="hcard-pip" style="background:'+pipBg+'"></div>';
-      html+='<div class="hcard-img">'+hImg(h.id,init,false)+'</div>';
-      html+='<div class="hcard-body"><div class="hcard-name">'+h.name+'</div>';
-      html+='<div class="hcard-stats"><span class="hcard-wr" style="color:'+wrColor[t]+'">'+(h.wr?(h.wr*100).toFixed(1)+'%':'—')+'</span><span class="hcard-pr">'+(h.pick?(h.pick*100).toFixed(1)+'%':'')+'</span></div>';
-      html+='</div></div>';
-    });
-    html+='</div></div>';
+  const heroes=(appData.heroes||[]).slice().sort((a,b)=>(b.wr||0)-(a.wr||0));
+  const wrCol=p=> p>=52?'var(--green)':(p>=49?'var(--amber)':'var(--red)');
+  let html='<style>'
+    +'.lct-pill{cursor:pointer;font-size:11px;padding:5px 11px;border-radius:7px;border:1px solid var(--border2);color:var(--muted);display:inline-block;}'
+    +'.lct-pill.on{background:rgba(230,173,62,.16);border-color:var(--accent);color:#f0c563;}'
+    +'.lct-pill:hover{border-color:var(--accent);}'
+    +'.lct{width:100%;border-collapse:collapse;}'
+    +'.lct th{font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);font-weight:400;text-align:left;padding:6px 8px;}'
+    +'.lct td{padding:9px 8px;border-top:1px solid var(--border);vertical-align:middle;}'
+    +'.lctr{cursor:pointer;}.lctr:hover td{background:var(--surface2);}'
+    +'.lct-av{width:40px;height:40px;border-radius:9px;overflow:hidden;flex-shrink:0;}'
+    +'.lct-tier{font-size:11px;font-weight:700;padding:2px 8px;border-radius:6px;color:#14110b;}'
+    +'</style>';
+  html+='<div class="home-hdr"><h2>Plantel · Parche '+appData.patch+'</h2>'
+    +'<p>Win rate del parche actual · ▲▼ = cambio vs el parche anterior · clic en un héroe para su build</p></div>';
+  html+='<div style="display:flex;align-items:center;gap:13px;margin-bottom:12px;flex-wrap:wrap">'
+    +'<span style="font-size:12px;color:#cdbf9d">'+(totalSampleGames()>0?fmtCount(totalSampleGames())+' partidas analizadas':'Sin datos — presiona Actualizar')+'</span>'
+    +(lu?'<span style="font-size:11px;color:var(--green)">En vivo · '+lu+'</span>':'<span style="font-size:11px;color:var(--amber)">Presiona Actualizar para datos en vivo</span>')
+    +'<button class="upd-btn" onclick="exportTierImage()" style="margin-left:auto">🖼️ '+L('Exportar imagen','Export image')+'</button>'
+    +'</div>';
+  if(appData.patchAnchor && appData.patchAnchor.ts){
+    var _ageH=(Date.now()/1000 - appData.patchAnchor.ts)/3600;
+    if(_ageH < 36 || totalSampleGames() < 50000){
+      html+='<div style="font-size:11px;color:var(--amber);background:rgba(230,173,62,.08);border:1px solid var(--border2);border-radius:7px;padding:8px 11px;margin-bottom:12px">⏳ '+L('Datos aún asentándose — el parche es reciente y los porcentajes pueden moverse.','Data still settling — the patch is recent and percentages may shift.')+'</div>';
+    }
+  }
+  html+='<table class="lct"><thead><tr>'
+    +'<th style="width:30px">#</th><th>Héroe</th><th style="width:38%">Win rate <span style="color:var(--hint);text-transform:none;letter-spacing:0">· vs parche ant.</span></th>'
+    +'<th style="width:62px">Sel.</th><th style="width:74px">Partidas</th>'
+    +'<th style="width:54px;text-align:center">Tier</th></tr></thead><tbody>';
+  if(!heroes.length){
+    html+='<tr><td colspan="6" style="text-align:center;color:var(--hint);padding:26px">— Sin datos todavía. Presiona "Actualizar Todo". —</td></tr>';
+  }
+  heroes.forEach(function(h,i){
+    var init=h.name.split(' ').map(function(w){return w[0];}).join('').slice(0,2).toUpperCase();
+    var p=h.wr?h.wr*100:0;
+    var c=h.wr?wrCol(p):'var(--muted)';
+    var w=h.wr?Math.max(6,Math.min(100,Math.round((p-44)/12*100))):0;
+    var tb=tCol[h.tier]||'#a89878';
+    html+='<tr class="lctr" onclick="tlPick(\''+h.id+'\')">'
+      +'<td style="color:var(--hint)">'+(i+1)+'</td>'
+      +'<td><div style="display:flex;align-items:center;gap:9px"><div class="lct-av">'+hImg(h.id,init,false)+'</div><span style="font-size:14px">'+h.name+'</span></div></td>'
+      +'<td><div style="display:flex;align-items:center;gap:9px"><div style="flex:1;height:5px;border-radius:3px;background:rgba(255,255,255,.07);overflow:hidden"><div style="width:'+w+'%;height:100%;border-radius:3px;background:'+c+'"></div></div><span style="color:'+c+';font-weight:600;min-width:46px">'+(h.wr?p.toFixed(1)+'%':'—')+'</span>'+trendHtml(h)+'</div></td>'
+      +'<td style="color:#cdbf9d;font-size:12px">'+(h.pick?(h.pick*100).toFixed(1)+'%':'—')+'</td>'
+      +'<td style="color:var(--muted);font-size:12px">'+(h.matches?fmtCount(h.matches):'—')+'</td>'
+      +'<td style="text-align:center"><span class="lct-tier" style="background:'+tb+'">'+(h.tier||'—')+'</span>'+(lowSample(h.matches)?'<div style="font-size:8px;color:var(--hint);margin-top:2px;letter-spacing:.02em" title="'+L('Muestra pequeña — tier ajustado hacia 50%','Small sample — tier adjusted toward 50%')+'">'+L('muestra baja','low sample')+'</div>':'')+'</td>'
+      +'</tr>';
   });
+  html+='</tbody></table>';
+  html+='<div style="font-size:10px;color:var(--hint);margin-top:12px;padding-top:9px;border-top:1px solid var(--border);display:flex;justify-content:space-between;flex-wrap:wrap;gap:6px">'
+    +'<span>Datos: deadlock-api.com · desde el parche '+(appData.patch||'?')+' · Rango: '+getRankLabel()+'</span>'
+    +'<span>Hecho en Puerto Rico 🇵🇷 · LaCitadel · por Chanlaser</span>'
+    +'</div>';
   document.getElementById('mainContent').innerHTML=html;
 }
 
-// ── TIER LIST VIEW (v1.1) ──────────────────────────────────────────────────
-function renderTierList(){
-  const tiers=['S','A','B','C','D'];
-  const tCol={S:'#fbbf24',A:'#34d399',B:'#60a5fa',C:'#f87171',D:'#7a7a88'};
-  const tDesc={S:'Dominantes en el meta',A:'Muy fuertes',B:'Sólidos y viables',C:'Por debajo del promedio',D:'Necesitan un buff'};
-  const lu=appData.updatedAt;
-  let html='<div class="home-hdr"><h2>📊 Tier List · Parche '+appData.patch+'</h2>'
-    +'<p>Basada en win rate real de deadlock-api.com · Rango: <strong style="color:'+getRankColor()+'">'+getRankLabel()+'</strong> · '
-    +(lu?'<span style="color:var(--green)">Datos en vivo · '+lu+'</span>':'<span style="color:var(--amber)">Presiona Actualizar para datos en vivo</span>')
-    +'</p></div>';
-  tiers.forEach(tr=>{
-    const g=appData.heroes.filter(h=>h.tier===tr).sort((a,b)=>(b.wr||0)-(a.wr||0));
-    html+='<div class="tlv-row">'
-      +'<div class="tlv-badge" style="background:'+tCol[tr]+'" title="'+tDesc[tr]+'">'+tr+'</div>'
-      +'<div class="tlv-heroes">';
-    if(!g.length){ html+='<div class="tlv-empty">— Ningún héroe en este tier ahora mismo —</div>'; }
-    g.forEach(h=>{
-      const init=h.name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
-      html+='<div class="tlv-hero" onclick="tlPick(\''+h.id+'\')" title="'+h.name+' · WR '+(h.wr?(h.wr*100).toFixed(1):'?')+'% · Pick '+(h.pick?(h.pick*100).toFixed(1):'?')+'%">'
-        +'<div class="tlv-img">'+hImg(h.id,init,false)+'</div>'
-        +'<div class="tlv-name">'+h.name+'</div>'
-        +'<div class="tlv-wr" style="color:'+tCol[tr]+'">'+(h.wr?(h.wr*100).toFixed(1)+'%':'—')+'</div>'
-        +'</div>';
-    });
-    html+='</div></div>';
-  });
-  html+='<div style="font-size:10px;color:var(--hint);margin-top:6px">Criterio: S ≥ 55% WR · A ≥ 52% · B ≥ 49% · C ≥ 46% · D &lt; 46% · Ordenados por win rate dentro de cada tier · Haz click en un héroe para ver su build</div>';
-  document.getElementById('mainContent').innerHTML=html;
-}
 function tlPick(id){ setNav('roster'); pick(id); }
 
 // ── HERO HEADER ───────────────────────────────────────────────────────────────
@@ -1240,6 +1287,7 @@ function heroHdr(h){
     +'<div class="hh-stats">'
     +'<div class="stat-box" title="Win Rate — updated by Refresh Update"><div class="stat-val" style="color:'+wrColor+'">'+(h.wr?(h.wr*100).toFixed(1)+'%':'—')+'</div><div class="stat-lbl">Win Rate</div></div>'
     +'<div class="stat-box" title="Pick Rate — updated by Refresh Update"><div class="stat-val">'+(h.pick?(h.pick*100).toFixed(1)+'%':'—')+'</div><div class="stat-lbl">Pick Rate</div></div>'
+    +'<div class="stat-box" title="Partidas analizadas para estas estadísticas"><div class="stat-val" style="color:var(--green)">'+(h.matches?fmtCount(h.matches):'—')+'</div><div class="stat-lbl">Partidas</div></div>'
     +'<div class="stat-box"><div class="stat-val" style="color:var(--amber)">'+h.tier+'</div><div class="stat-lbl">Tier</div></div>'
     +'<div class="stat-box"><div class="stat-val" style="font-size:11px;color:var(--muted)">'+(h.patched||'—')+'</div><div class="stat-lbl">As of</div></div>'
     +'<div class="stat-box" title="Current rank filter"><div class="stat-val" style="font-size:10px;color:'+getRankColor()+'"><span class="rank-dot" style="background:'+getRankColor()+'"></span>'+getRankLabel()+'</div><div class="stat-lbl">Rank filter</div></div>'
@@ -1248,11 +1296,15 @@ function heroHdr(h){
 
 // ── MAIN ──────────────────────────────────────────────────────────────────────
 function renderMain(){
-  if(currentNav==='tierlist'){ renderTierList(); return; }
+  var _showTable=(currentNav==='roster'&&!selected)||currentNav==='polls';
+  var _sb=document.querySelector('.sidebar'); if(_sb) _sb.style.display=_showTable?'none':'';
+  var _ct=document.querySelector('.content'); if(_ct) _ct.style.maxWidth=_showTable?'none':'900px';
+  if(currentNav==='polls'){ renderPolls(); return; }
   if(currentNav==='lb')    { renderLeaderboard(); return; }
   if(currentNav==='patch') { renderPatchNotes();  return; }
   if(currentNav==='map')   { renderMapData();     return; }
   if(currentNav==='logs')  { renderLogs();       return; }
+  if(currentNav==='socials'){ renderSocials();   return; }
   if(!selected){renderHome();return;}
   const h=appData.heroes.find(x=>x.id===selected);
   if(!h){renderHome();return;}
@@ -1585,6 +1637,88 @@ if(IS_ELECTRON){
   });
 }
 
+function parsePatchTs(title){
+  var m=(title||'').match(/(\d{2})-(\d{2})-(\d{4})/);
+  if(!m) return 0;
+  return Math.floor(Date.UTC(+m[3], (+m[1])-1, +m[2], 0,0,0)/1000);
+}
+function computePatchWindows(list){
+  var dated=(list||[]).map(function(p){ return {ts:(p.ts||parsePatchTs(p.name||p.title||'')), label:(p.name||p.title||''), date:(p.date||'')}; }).filter(function(x){ return x.ts>0; });
+  dated.sort(function(a,b){ return b.ts-a.ts; });
+  var latest=dated[0]||{ts:0,label:'',date:''}, prev=dated[1]||{ts:0,label:''};
+  var dateStr=latest.date||(latest.ts?new Date(latest.ts*1000).toISOString().slice(0,10):'');
+  appData.patchList=dated;   // newest-first, drives the patch dropdown
+  return {latestTs:latest.ts, prevTs:prev.ts, label:latest.label, date:dateStr};
+}
+function bbcodeToHtml(s){
+  if(!s) return '';
+  var h=String(s);
+  h=h.replace(/\[img\][\s\S]*?\[\/img\]/gi,'');
+  h=h.replace(/\[h\d\]([\s\S]*?)\[\/h\d\]/gi,'<strong>$1</strong><br>');
+  h=h.replace(/\[b\]([\s\S]*?)\[\/b\]/gi,'<strong>$1</strong>');
+  h=h.replace(/\[i\]([\s\S]*?)\[\/i\]/gi,'<em>$1</em>');
+  h=h.replace(/\[url=([^\]]+)\]([\s\S]*?)\[\/url\]/gi,'$2');
+  h=h.replace(/\[\*\]/g,'\u2022 ');
+  h=h.replace(/\[p\]/gi,'').replace(/\[\/p\]/gi,'<br>');
+  h=h.replace(/\[\/?[a-z0-9=\/.:_ -]+\]/gi,'');   // strip any remaining bbcode tags
+  h=h.replace(/(<br>\s*){3,}/gi,'<br><br>');         // collapse runs of breaks
+  return h.trim();
+}
+function populatePatchSel(){
+  var sel=document.getElementById('patchSel'); if(!sel) return;
+  var list=appData.patchList||[];
+  if(!list.length){ sel.innerHTML='<option value="0">'+L('Último parche','Latest patch')+'</option>'; return; }
+  var cur=appData.patchSelIdx||0;
+  sel.innerHTML=list.map(function(p,i){
+    var tag=/gameplay/i.test(p.label||'')?(' \u00b7 '+L('Mayor','Major')):(/minor/i.test(p.label||'')?' \u00b7 Minor':'');
+    return '<option value="'+i+'" '+(i===cur?'selected':'')+'>'+(p.date||('#'+i))+tag+'</option>';
+  }).join('');
+}
+function selectPatch(idx){
+  idx=parseInt(idx,10)||0;
+  var list=appData.patchList||[];
+  if(!list.length||!list[idx]) return;
+  appData.patchSelIdx=idx;
+  var anchorTs=list[idx].ts;
+  var capTs=(idx>0)?list[idx-1].ts:0;
+  var prevTs=(idx+1<list.length)?list[idx+1].ts:0;
+  var prevCapTs=list[idx].ts;
+  loadRanksForWindow(anchorTs, capTs, prevTs, prevCapTs, list[idx].date);
+}
+async function loadRanksForWindow(anchorTs, capTs, prevTs, prevCapTs, dateLabel){
+  var sel=document.getElementById('patchSel'); if(sel) sel.disabled=true;
+  var mc=document.getElementById('mainContent'); if(mc) mc.innerHTML='<div style="padding:48px 12px;color:var(--muted);font-size:13px">\u23F3 '+L('Cargando datos del parche\u2026','Loading patch data\u2026')+'</div>';
+  try{
+    var newRanks={};
+    for(var i=0;i<RANKS.length;i++){
+      var rk=RANKS[i];
+      var cur=await window.api.fetchHeroStats(rk.badge, anchorTs, capTs, i>0);
+      var pv={};
+      if(prevTs>0){ try{ var pr=await window.api.fetchHeroStats(rk.badge, prevTs, prevCapTs, true); if(pr&&pr.ok&&pr.data) pr.data.forEach(function(h){ pv[h.id]=h.wr; }); }catch(e){} }
+      if(cur&&cur.ok&&cur.data&&cur.data.length>=10){
+        var mp={};
+        cur.data.forEach(function(h){ var wp=pv[h.id]; var o={wr:h.wr,pick:h.pick||0,matches:h.matches||0,wrPrev:(wp!=null?wp:null),delta:(wp!=null?(h.wr-wp):null)}; mp[h.id]=o; mp[(h.name||'').toLowerCase()]=o; });
+        newRanks[rk.id]=mp;
+      }
+      await new Promise(function(r){ setTimeout(r,160); });
+    }
+    if(Object.keys(newRanks).length){ appData.ranksData=newRanks; }
+    if(dateLabel){ appData.patch=dateLabel; }
+    appData.patchAnchor={ts:anchorTs, prevTs:prevTs, label:(dateLabel||''), date:(dateLabel||'')};
+    applyRankFromCache(getRank());   // pass current rank — without it the lookup was ranksData[undefined] and silently no-op'd, so old-patch data never repainted
+    saveData();
+  }catch(e){}
+  if(sel) sel.disabled=false;
+  renderMain();
+}
+function trendHtml(h){
+  if(h.delta==null) return '<span style="font-size:10px;color:var(--hint);min-width:48px;text-align:right">—</span>';
+  var d=h.delta*100;
+  if(Math.abs(d)<0.05) return '<span style="font-size:10px;color:var(--hint);min-width:48px;text-align:right">±0.0</span>';
+  var up=d>0;
+  return '<span style="font-size:11px;font-weight:700;min-width:48px;text-align:right;color:'+(up?'var(--green)':'var(--red)')+'">'+(up?'\u25B2':'\u25BC')+' '+Math.abs(d).toFixed(1)+'</span>';
+}
+
 async function runUpdate(silent=false){
   if(!checkElectron()) return;
   const btn=document.getElementById('updateBtn');
@@ -1607,13 +1741,35 @@ async function runUpdate(silent=false){
   let herosFetched=0,buildsFetched=0,itemsFetched=0,absFetched=0,newHeroes=0;
   let patch = appData.patch;
 
+  // Patch-anchored data window (latest + previous patch, from the patches feed)
+  let _anchorTs=0, _prevTs=0, _anchorLabel='', _anchorDate='';
+  try{
+    const _pl = await window.api.fetchPatchNotes();
+    if(_pl && _pl.ok && Array.isArray(_pl.data) && _pl.data.length){
+      const _w = computePatchWindows(_pl.data);
+      _anchorTs=_w.latestTs; _prevTs=_w.prevTs; _anchorLabel=_w.label; _anchorDate=_w.date;
+      if(_anchorDate){ appData.patch=_anchorDate; patch=_anchorDate; }
+      appData.patchAnchor={ts:_anchorTs, prevTs:_prevTs, label:_anchorLabel, date:_anchorDate};
+      appData.patchSelIdx=0;
+      if(typeof populatePatchSel==='function') populatePatchSel();
+      appData.patchNotes=_pl.data;   // keep notes in sync so the badge logic sees the latest
+      appData.patchNotesUpdatedAt=new Date().toISOString().slice(0,10);
+      if(typeof markPatchSeen==='function') markPatchSeen();  // pressing Actualizar clears the new-patch flash
+    }
+  }catch(e){}
+
   // ── PHASE 1: Hero win rates & pick rates ──────────────────────────────────
   addStep('section', t('phase1'));
   const stepH = updLog.length;
   addStep('active', 'Obteniendo estadisticas de heroes desde deadlock-api.com...');
   setBar(5);
 
-  const hRes = await window.api.fetchHeroStats(badge);
+  const hRes = await window.api.fetchHeroStats(badge, _anchorTs, 0, false);
+  let _prevMap={};
+  if(_prevTs>0){
+    try{ const _hp = await window.api.fetchHeroStats(badge, _prevTs, _anchorTs, true);
+      if(_hp && _hp.ok && _hp.data) _hp.data.forEach(function(h){ _prevMap[h.id]=h.wr; }); }catch(e){}
+  }
   if(hRes.ok && hRes.data && hRes.data.length >= 10){
     const incoming = hRes.data;
     // Detect patch from data if available
@@ -1624,12 +1780,12 @@ async function runUpdate(silent=false){
     // Update existing heroes
     appData.heroes.forEach(h=>{
       const m=incMap[h.id]||incMap[h.name.toLowerCase()];
-      if(m){ h.wr=m.wr; if(m.pick)h.pick=m.pick; h.tier=toTier(m.wr); h.patched=patch; herosFetched++; }
+      if(m){ h.wr=m.wr; if(m.pick)h.pick=m.pick; if(m.matches!=null)h.matches=m.matches; h.tier=toTier(m.wr, m.matches); var _wp=_prevMap[m.id]; h.wrPrev=(_wp!=null?_wp:null); h.delta=(_wp!=null?(m.wr-_wp):null); h.patched=patch; herosFetched++; }
     });
     // Add new heroes not in our list
     incoming.forEach(h=>{
       if(!appData.heroes.find(x=>x.id===h.id||x.name.toLowerCase()===h.name.toLowerCase())){
-        appData.heroes.push({id:h.id,name:h.name,wr:h.wr,pick:h.pick||0,tier:h.tier,added:patch,patched:patch});
+        appData.heroes.push({id:h.id,name:h.name,wr:h.wr,pick:h.pick||0,matches:h.matches||0,tier:toTier(h.wr),added:patch,patched:patch});
         newHeroes++;
       }
     });
@@ -1641,18 +1797,48 @@ async function runUpdate(silent=false){
         return true;
       });
     }
-    logEntry('Phase1','ok','','38 heroes updated','');
+    appData.ranksData = appData.ranksData || {};
+    (function(){ var mp={}; incoming.forEach(function(hh){ var _wp=_prevMap[hh.id]; var o={wr:hh.wr,pick:hh.pick||0,matches:hh.matches||0,wrPrev:(_wp!=null?_wp:null),delta:(_wp!=null?(hh.wr-_wp):null)}; mp[hh.id]=o; mp[(hh.name||'').toLowerCase()]=o; }); appData.ranksData[getRank()]=mp; })();
+    logEntry('Phase1','ok','',herosFetched+' héroes actualizados','');
     updateStep(stepH,'done',
       t('updatedHeroes')+herosFetched+t('heroesSuffix')+'+'+newHeroes+t('heroesNew'),
       ('Fuente: deadlock-api.com · Rango: ')+getRankLabel());
   } else {
     const p1err = hRes.error||'unknown';
     logEntry('Phase1','err','','Hero fetch failed',p1err);
-    const gaiusMsg = '<div style="background:rgba(250,68,84,.06);border:1px solid rgba(250,68,84,.2);border-radius:7px;padding:11px 13px;margin-top:8px"><div style="font-size:13px;font-weight:600;color:#fa8080;font-style:italic;margin-bottom:2px">'+t('gaiusQuote')+'</div><div style="font-size:10px;color:#3e3e4a;margin-top:4px">'+t('gaiusAttrib')+'</div></div><div style="font-size:11px;color:#7a7a88;margin-top:8px;display:flex;align-items:center;gap:6px"><span style="width:6px;height:6px;border-radius:50%;background:#34d399;display:inline-block;flex-shrink:0"></span>'+t('dataSafe')+'</div>';
+    const safeMsg = '<div style="font-size:11px;color:#7a7a88;margin-top:8px;display:flex;align-items:center;gap:6px"><span style="width:6px;height:6px;border-radius:50%;background:#34d399;display:inline-block;flex-shrink:0"></span>'+t('dataSafe')+'</div>';
     updateStep(stepH,'err',
-      t('fetchHeroErr')+p1err, gaiusMsg);
+      t('fetchHeroErr')+p1err, safeMsg);
   }
   setBar(12);
+
+  // ── PHASE 1b: cache every other rank so switching ranks is INSTANT ────────
+  try {
+    appData.ranksData = appData.ranksData || {};
+    addStep('section', 'Rangos · cambio instantáneo');
+    const _others = RANKS.filter(r=>r.id!==getRank());
+    for(let ri=0; ri<_others.length; ri++){
+      const rk=_others[ri];
+      const rsi=updLog.length;
+      addStep('active', 'Rango '+(ri+1)+'/'+_others.length+': '+rk.label+'…');
+      try{
+        const rr = await window.api.fetchHeroStats(rk.badge, _anchorTs, 0, true);
+        let _pv={};
+        if(_prevTs>0){ try{ const _rrp = await window.api.fetchHeroStats(rk.badge, _prevTs, _anchorTs, true); if(_rrp && _rrp.ok && _rrp.data) _rrp.data.forEach(function(h){ _pv[h.id]=h.wr; }); }catch(e){} }
+        if(rr.ok && rr.data && rr.data.length>=10){
+          const mp={};
+          rr.data.forEach(h=>{ const _wp=_pv[h.id]; const o={wr:h.wr,pick:h.pick||0,matches:h.matches||0,wrPrev:(_wp!=null?_wp:null),delta:(_wp!=null?(h.wr-_wp):null)}; mp[h.id]=o; mp[(h.name||'').toLowerCase()]=o; });
+          appData.ranksData[rk.id]=mp;
+          updateStep(rsi,'done', rk.label+' ✓','');
+        } else {
+          updateStep(rsi,'skip', rk.label+' — sin datos','');
+        }
+      } catch(e){ updateStep(rsi,'skip', rk.label+' — error',''); }
+      await new Promise(res=>setTimeout(res,250));
+      setBar(12 + Math.round((ri+1)/_others.length*4));
+    }
+    saveApp();
+  } catch(e){ /* rank cache is best-effort; never blocks the update */ }
 
   // ── PHASE 2: Builds for all heroes (one at a time, polite rate) ───────────
   addStep('section', t('phase2'));
@@ -1667,8 +1853,10 @@ async function runUpdate(silent=false){
     setBar(12 + Math.round(bi/total*55));
 
     const bRes = await window.api.fetchHeroBuild(id);
-    if(bRes.ok && bRes.data && bRes.data.early && bRes.data.early.length){
-      logEntry('Phase2','ok',id,'Build updated','sections:'+(bRes.data.early.length+bRes.data.core.length+bRes.data.late.length));
+    const b = bRes.data;
+    const hasBuild = b && ((b.early&&b.early.length)||(b.core&&b.core.length)||(b.late&&b.late.length));
+    if(bRes.ok && hasBuild){
+      logEntry('Phase2','ok',id,'Build updated','sections:'+(b.early.length+b.core.length+b.late.length));
       if(!appData.heroData[id]) appData.heroData[id]={};
       const hd = appData.heroData[id];
       // Delete old, write new — clean atomic replace
@@ -1703,18 +1891,11 @@ async function runUpdate(silent=false){
   const itemStep = updLog.length;
   addStep('active', t('fetchingItemWr'));
 
-  const heroesWithIds = appData.heroes.filter(h=>{
-    // Only fetch if we know the numeric ID
-    const NUMERIC = {"graves":1,"abrams":2,"lash":3,"infernus":4,"shiv":6,"haze":7,
-      "dynamo":8,"grey-talon":10,"mo-and-krill":11,"pocket":13,"seven":15,
-      "vindicta":16,"lady-geist":18,"bebop":20,"kelvin":21,"ivy":22,
-      "paradox":25,"warden":27,"yamato":31,"mcginnis":37,"wraith":38,
-      "mirage":39,"calico":40,"holliday":50,"vyper":51,"sinclair":52,
-      "rem":54,"billy":58,"victor":59,"drifter":60,"the-doorman":61,
-      "silver":62,"celeste":63,"apollo":64,"mina":65,"venator":66,
-      "paige":67,"viscous":68};
-    return !!NUMERIC[h.id];
-  });
+  const heroesWithIds = appData.heroes.filter(h=>!!h.id);
+  // NOTE: we no longer gate on a hardcoded numeric-ID map. main.js resolves the
+  // numeric id dynamically from the live assets endpoint (heroNumId), so NEW
+  // heroes Valve adds get item/build data automatically. If main.js can't
+  // resolve an id it simply returns null and we skip that hero gracefully.
 
   for(const hero of heroesWithIds){
     const iRes = await window.api.fetchItemStats(hero.id, badge);
@@ -1819,6 +2000,8 @@ function setLang(l){
   updateLangPill();
   applyStaticLang();   // header, nav, sidebar, TOS, static labels
   applyLang();         // existing dynamic label refresh
+  if(typeof populateRankSel==='function') populateRankSel();
+  if(typeof populatePatchSel==='function') populatePatchSel();
   renderMain();        // re-render the active hero/tab content
   renderSB(document.getElementById('heroSearch') ? document.getElementById('heroSearch').value.toLowerCase() : '');
 }
@@ -1845,7 +2028,7 @@ function populateRankSel(){
   if(!sel)return;
   sel.innerHTML=RANKS.map(r=>{
     const selected=getRank()===r.id?'selected':'';
-    return '<option value="'+r.id+'" '+selected+'>'+r.label+'</option>';
+    return '<option value="'+r.id+'" '+selected+'>'+rankDisp(r)+'</option>';
   }).join('');
   updateRankBadge();
 }
@@ -1856,21 +2039,30 @@ function updateRankBadge(){
   sel.style.color=getRankColor();
   sel.title='Rank filter: '+getRankLabel()+' (badge ≥'+getRankBadge()+') · Applied on next Update';
 }
+function applyRankFromCache(rankId){
+  const cache=(appData.ranksData||{})[rankId];
+  if(!cache) return false;
+  appData.heroes.forEach(h=>{
+    const m=cache[h.id]||cache[(h.name||'').toLowerCase()];
+    if(m){ h.wr=m.wr; h.pick=m.pick; if(m.matches!=null)h.matches=m.matches; h.tier=toTier(m.wr, m.matches); h.wrPrev=(m.wrPrev!=null?m.wrPrev:null); h.delta=(m.delta!=null?m.delta:null); }
+  });
+  return true;
+}
 function setRank(rankId){
   appData.selectedRank=rankId;
-  saveApp();
   updateRankBadge();
-  // Show a notice if rank changed — next Update will use this rank
+  const cached=applyRankFromCache(rankId);
   const btn=document.getElementById('updateBtn');
-  if(btn) btn.title='Will fetch data for: '+getRankLabel();
-  renderMain(); // Re-render to show rank label in stats
+  if(btn) btn.title=(cached?'Mostrando: ':'Se aplicará al Actualizar: ')+getRankLabel();
+  saveApp();
+  renderMain(); // instant if this rank is cached, otherwise applies on next Actualizar
 }
 
 // ── NAV SYSTEM ───────────────────────────────────────────────────────────────
 let currentNav = 'roster';
 function setNav(nav){
   currentNav = nav;
-  ['roster','tierlist','lb','patch','map','logs'].forEach(n=>{
+  ['roster','polls','lb','patch','map','logs','socials'].forEach(n=>{
     document.getElementById('nav-'+n).classList.toggle('active', n===nav);
   });
   selected = null;
@@ -1880,8 +2072,10 @@ function applyNavLang(){
   const nt = document.getElementById('nt-roster'); if(nt) nt.textContent = t('navRoster');
   const nl = document.getElementById('nt-lb');     if(nl) nl.textContent = t('navLeaderboard');
   const np = document.getElementById('nt-patch');  if(np) np.textContent = t('navPatch');
+  const npo = document.getElementById('nt-polls'); if(npo) npo.textContent = t('navPolls');
   const nm = document.getElementById('nt-map');    if(nm) nm.textContent = t('navMapData');
   const nl2 = document.getElementById('nt-logs'); if(nl2) nl2.textContent = t('navLogs');
+  const nso = document.getElementById('nt-socials'); if(nso) nso.textContent = t('navSocials');
 }
 function applyStaticLang(){
   const sub=document.getElementById('appSub'); if(sub) sub.textContent=t('appSub');
@@ -1940,14 +2134,21 @@ async function changeLbRegion(v){
 }
 
 // ── PATCH NOTES VIEW ──────────────────────────────────────────────────────────
-let patchNotesLoading=false, patchNotesTried=false;
+let patchNotesLoading=false, patchNotesTried=false, patchAutoRefreshed=false;
 function renderPatchNotes(){
   const notes = appData.patchNotes || [];
   const canFetch = IS_ELECTRON && window.api && window.api.fetchPatchNotes;
+  if(canFetch && !patchNotesLoading && !patchAutoRefreshed){
+    const _today=new Date().toISOString().slice(0,10);
+    if(appData.patchNotesUpdatedAt!==_today){ patchAutoRefreshed=true; setTimeout(function(){ loadPatchNotes(true); },0); }
+  }
   let html = '<div class="home-hdr"><h2>📋 '+t('patchNotesTitle')+'</h2>'
     +'<p>'+t('patchNotesSub')+(appData.patchNotesUpdatedAt?' · <span style="color:var(--green)">'+t('liveData')+' · '+appData.patchNotesUpdatedAt+'</span>':'')+'</p></div>';
   if(canFetch && !patchNotesLoading){
-    html += '<div style="margin-bottom:12px"><button class="upd-btn" onclick="loadPatchNotes(true)">'+t('patchRefresh')+'</button></div>';
+    html += '<div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:14px">'
+      +'<button class="upd-btn" style="font-size:14px;padding:11px 24px;font-weight:700" onclick="loadPatchNotes(true)">'+t('patchRefresh')+'</button>'
+      +'<span style="font-size:12px;color:var(--muted)">'+t('patchRefreshHint')+'</span>'
+      +'</div>';
   }
   if(patchNotesLoading){
     html += '<div style="padding:20px;color:var(--muted);font-size:12px">'+t('patchNotesLoading')+'</div>';
@@ -1955,11 +2156,11 @@ function renderPatchNotes(){
     notes.forEach(p=>{
       html += '<div style="background:var(--surface2);border:1px solid var(--border);border-radius:9px;padding:13px 15px;margin-bottom:9px">'
         +'<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">'
-        +'<strong style="font-size:13px;color:var(--text)">'+(p.name||'Parche')+'</strong>'
-        +(p.date?'<span style="font-size:11px;color:var(--amber);font-weight:600">📅 '+p.date+'</span>':'')
+        +'<strong style="font-size:13px;color:var(--text)">'+(p.name||L('Parche','Patch'))+'</strong>'
+        +(p.date?'<span style="font-size:14px;color:var(--green);font-weight:800">📅 '+p.date+'</span>':'')
         +(p.url?'<a class="extlink" href="'+p.url+'" target="_blank" style="font-size:10px;margin-left:auto">'+t('patchReadMore')+'</a>':'')
         +'</div>'
-        +(p.summary?'<div style="font-size:11px;color:var(--muted);margin-top:8px;line-height:1.6">'+p.summary+'</div>':'')
+        +(p.summary?'<div style="font-size:11px;color:var(--muted);margin-top:8px;line-height:1.6">'+bbcodeToHtml(p.summary)+'</div>':'')
         +'</div>';
     });
   } else if(canFetch && !patchNotesTried){
@@ -1971,7 +2172,12 @@ function renderPatchNotes(){
     html += '<div style="padding:16px;background:var(--surface2);border-radius:8px;font-size:12px;color:var(--muted)">'+t('patchNotesBrowser')+' <a class="extlink" href="https://deadlock-api.com/patches" target="_blank">deadlock-api.com/patches →</a></div>';
   }
   document.getElementById('mainContent').innerHTML = html;
+  markPatchSeen();
 }
+function patchLatestId(){ var n=appData.patchNotes||[]; return n.length?(n[0].name||n[0].date||''):''; }
+function updatePatchBadge(){ var b=document.getElementById('patchNewBadge'); if(!b) return; var latest=patchLatestId(); var isNew=(latest && latest!==appData.patchSeenLatest); b.style.display=isNew?'inline-block':'none'; b.classList.toggle('flashing', !!isNew); var ub=document.getElementById('updateBtn'); if(ub) ub.classList.toggle('patch-flash', !!isNew); }
+function markPatchSeen(){ var latest=patchLatestId(); if(latest && appData.patchSeenLatest!==latest){ appData.patchSeenLatest=latest; if(typeof saveData==='function') saveData(); } updatePatchBadge(); }
+
 async function loadPatchNotes(force){
   if(patchNotesLoading) return;
   if(!(IS_ELECTRON && window.api && window.api.fetchPatchNotes)) { patchNotesTried=true; return; }
@@ -1984,6 +2190,7 @@ async function loadPatchNotes(force){
       appData.patchNotes = res.data;
       appData.patchNotesUpdatedAt = new Date().toISOString().slice(0,10);
       if(typeof saveData==='function') saveData();
+      if(currentNav==='patch'){ markPatchSeen(); } else { updatePatchBadge(); }
     }
   }catch(e){ console.log('[patch-notes] error:', e.message); }
   patchNotesLoading=false; patchNotesTried=true;
@@ -2072,6 +2279,7 @@ function renderMapData(){
     +'</div>';
 
   html += rankMsgBanner();
+  html += '<div style="padding:12px 14px;background:rgba(230,173,62,.08);border:1px solid var(--amber);border-radius:8px;font-size:12px;color:var(--text);line-height:1.6;margin-bottom:16px">'+t('mapDisclaimer')+'</div>';
 
   const cards = [
     { title:t('mapCardDeathTitle'), sub:t('mapCardDeathSub'), detail:t('mapCardDeathDetail') },
@@ -2106,7 +2314,7 @@ function renderMapData(){
 
 // ── TERMS OF SERVICE ─────────────────────────────────────────────────────────
 const TOS_KEY     = 'lc_tos_accepted';
-const TOS_VERSION = '1.0.0';
+const TOS_VERSION = '1.0.2';
 let tosSavedLang  = 'es';   // user's real lang pref, restored after TOS accept
 
 function tosCbToggle(cbId, btnId){
@@ -2371,17 +2579,339 @@ function formatSessionText(session){
 }
 
 
+
+// ════════════════════════════════════════════════════════════════════════
+//  ENCUESTAS / POLLS  ·  voto anónimo (Supabase)
+// ════════════════════════════════════════════════════════════════════════
+const SB_URL = 'https://itiqpzdekoplxhjadjmh.supabase.co';
+const SB_KEY = 'sb_publishable_tYHEJE3RZRuAbZgABOZxFQ_o7dUg9Tj'; // clave publishable (segura para el cliente)
+
+const POLLS = [
+  { id:'parche',    titulo:'¿Quién ganó más con el parche?',            titulo_en:'Who gained the most from the patch?',  cadencia:'semanal', orden:1, nuevo:false, max:5 },
+  { id:'op',        titulo:'¿Quién está OP?',                            titulo_en:'Who is OP?',                           cadencia:'semanal', orden:2, nuevo:false, max:5 },
+  { id:'buff',      titulo:'¿Quién necesita un buff?',                   titulo_en:'Who needs a buff?',                    cadencia:'semanal', orden:3, nuevo:false, max:5 },
+  { id:'molesto',   titulo:'¿Con quién es más molesto jugar en contra?', titulo_en:'Who is most annoying to play against?', cadencia:'mensual', orden:4, nuevo:false, max:5 },
+  { id:'divertido', titulo:'¿Quién es el más divertido de jugar?',       titulo_en:'Who is the most fun to play?',          cadencia:'mensual', orden:5, nuevo:false, max:5 },
+];
+function L(es,en){ return (typeof LANG!=='undefined' && LANG==='en') ? en : es; }
+
+function sbReady(){ return SB_URL.indexOf('supabase.co')>0 && SB_KEY.indexOf('sb_publishable_')===0; }
+function deviceId(){
+  try{ var d=localStorage.getItem('lc_device_id');
+    if(!d){ d=(window.crypto&&crypto.randomUUID)?crypto.randomUUID():('dev-'+Date.now()+'-'+Math.random().toString(36).slice(2)); localStorage.setItem('lc_device_id',d); }
+    return d; }catch(e){ return 'dev-fallback'; }
+}
+function isoWeek(dt){
+  var d=new Date(Date.UTC(dt.getFullYear(),dt.getMonth(),dt.getDate()));
+  var day=d.getUTCDay()||7; d.setUTCDate(d.getUTCDate()+4-day);
+  var ys=new Date(Date.UTC(d.getUTCFullYear(),0,1));
+  var wk=Math.ceil((((d-ys)/86400000)+1)/7);
+  return d.getUTCFullYear()+'-W'+String(wk).padStart(2,'0');
+}
+function periodFor(cad){ var n=new Date(); return cad==='mensual' ? (n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0')) : isoWeek(n); }
+function votedKey(p,per){ return 'lc_voted_'+p+'_'+per; }
+function hasVoted(p,per){ try{ return localStorage.getItem(votedKey(p,per))==='1'; }catch(e){ return false; } }
+function markVoted(p,per){ try{ localStorage.setItem(votedKey(p,per),'1'); }catch(e){} }
+function heroName(id){ var h=(appData.heroes||[]).find(function(x){return x.id===id;}); return h?h.name:id; }
+function heroInit(nm){ return (nm||'?').split(' ').map(function(w){return w[0];}).join('').slice(0,2).toUpperCase(); }
+
+var pollSel = {};
+
+async function sbInsertVotes(p, per, ids){
+  var rows=ids.map(function(h){ return {poll_id:p, hero_id:h, device_id:deviceId(), periodo:per}; });
+  var res=await fetch(SB_URL+'/rest/v1/votos?on_conflict=poll_id,hero_id,device_id,periodo', {
+    method:'POST',
+    headers:{ 'apikey':SB_KEY, 'Authorization':'Bearer '+SB_KEY, 'Content-Type':'application/json', 'Prefer':'resolution=ignore-duplicates,return=minimal' },
+    body:JSON.stringify(rows)
+  });
+  if(!res.ok && res.status!==409) throw new Error('HTTP '+res.status);
+  return true;
+}
+async function sbResults(p, per){
+  var url=SB_URL+'/rest/v1/resultados?select=hero_id,votos&poll_id=eq.'+encodeURIComponent(p)+'&periodo=eq.'+encodeURIComponent(per);
+  var res=await fetch(url, { headers:{ 'apikey':SB_KEY, 'Authorization':'Bearer '+SB_KEY } });
+  if(!res.ok) throw new Error('HTTP '+res.status);
+  return await res.json();
+}
+
+function pollDragStart(ev,id){ ev.dataTransfer.setData('text/plain',id); ev.dataTransfer.effectAllowed='copy'; }
+function pollAllowDrop(ev){ ev.preventDefault(); ev.dataTransfer.dropEffect='copy'; }
+function pollDrop(ev,p){ ev.preventDefault(); var id=ev.dataTransfer.getData('text/plain'); if(id) pollAdd(p,id); }
+function pollAdd(p,hid){
+  var poll=POLLS.find(function(x){return x.id===p;}); if(!poll) return;
+  if(hasVoted(p,periodFor(poll.cadencia))) return;
+  pollSel[p]=pollSel[p]||[];
+  if(pollSel[p].indexOf(hid)>=0) return;
+  if(pollSel[p].length>=poll.max) return;
+  pollSel[p].push(hid); renderPolls();
+}
+function pollRemove(p,hid){ if(!pollSel[p]) return; pollSel[p]=pollSel[p].filter(function(h){return h!==hid;}); renderPolls(); }
+
+async function pollSubmit(p){
+  var poll=POLLS.find(function(x){return x.id===p;}); if(!poll) return;
+  var per=periodFor(poll.cadencia); var sel=pollSel[p]||[];
+  if(!sel.length) return;
+  if(!sbReady()){ alert(L('Configura Supabase: pega tu clave sb_publishable_ en SB_KEY dentro de index.html.','Configure Supabase: paste your sb_publishable_ key into SB_KEY in index.html.')); return; }
+  var btn=document.getElementById('pollBtn_'+p);
+  if(btn){ btn.disabled=true; btn.textContent=L('Enviando…','Sending…'); }
+  try{
+    await sbInsertVotes(p, per, sel);
+    markVoted(p, per); pollSel[p]=[];
+    await showPollResults(p);
+  }catch(e){
+    if(btn){ btn.disabled=false; btn.textContent=L('Votar','Vote'); }
+    alert(L('No se pudo enviar el voto: ','Could not send your vote: ')+(e.message||e));
+  }
+}
+async function showPollResults(p){
+  var poll=POLLS.find(function(x){return x.id===p;}); if(!poll) return;
+  var per=periodFor(poll.cadencia);
+  var box=document.getElementById('pollRes_'+p);
+  if(box){ box.style.display='block'; box.innerHTML='<div style="font-size:11px;color:var(--hint);padding:6px 0">'+L('Cargando resultados…','Loading results…')+'</div>'; }
+  try{
+    var rows=await sbResults(p, per);
+    rows.sort(function(a,b){return b.votos-a.votos;});
+    var total=rows.reduce(function(s,r){return s+r.votos;},0)||0;
+    var top=rows.slice(0,12);
+    var html='<div style="font-size:11px;color:var(--muted);margin-bottom:6px">'+L('Resultados','Results')+' · '+per+' · '+total+' '+L('votos','votes')+'</div>';
+    if(!top.length){ html+='<div style="font-size:12px;color:var(--hint)">'+L('Aún no hay votos. ¡Sé el primero!','No votes yet. Be the first!')+'</div>'; }
+    top.forEach(function(r,i){
+      var pct=top[0].votos?Math.round(r.votos/top[0].votos*100):0;
+      html+='<div style="display:flex;align-items:center;gap:9px;margin:5px 0">'
+        +'<span style="width:16px;color:var(--hint);font-size:11px">'+(i+1)+'</span>'
+        +'<span style="width:130px;font-size:12px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+heroName(r.hero_id)+'</span>'
+        +'<span style="flex:1;height:6px;border-radius:3px;background:rgba(255,255,255,.07)"><span style="display:block;width:'+pct+'%;height:100%;border-radius:3px;background:var(--accent)"></span></span>'
+        +'<span style="width:36px;text-align:right;font-size:12px;color:#f0c563;font-weight:600">'+r.votos+'</span>'
+        +'</div>';
+    });
+    if(box){ box.innerHTML=html; }
+  }catch(e){
+    if(box){ box.innerHTML='<div style="font-size:11px;color:var(--red)">No se pudieron cargar los resultados ('+(e.message||e)+').</div>'; }
+  }
+  var btn=document.getElementById('pollBtn_'+p);
+  if(btn){ btn.disabled=true; btn.textContent=L('Ya votaste ✓','You voted ✓'); }
+}
+
+function renderPolls(){
+  var heroes=(appData.heroes||[]).slice().sort(function(a,b){return (a.name||'').localeCompare(b.name||'');});
+  var ordered=POLLS.slice().sort(function(a,b){ var na=a.nuevo?1:0, nb=b.nuevo?1:0; if(na!==nb) return nb-na; return a.orden-b.orden; });
+  var html='<style>'
+    +'.enc-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px 16px;margin-bottom:16px;}'
+    +'.enc-drop{min-height:54px;border:1.5px dashed var(--border2);border-radius:9px;padding:8px;display:flex;flex-wrap:wrap;gap:7px;align-items:center;margin:10px 0;}'
+    +'.enc-drop.full{border-color:var(--accent);}'
+    +'.enc-chip{display:flex;align-items:center;gap:6px;background:var(--surface2);border:1px solid var(--border2);border-radius:8px;padding:3px 9px 3px 4px;cursor:pointer;}'
+    +'.enc-pal{display:flex;flex-wrap:wrap;gap:7px;}'
+    +'.enc-sq{width:54px;height:54px;border-radius:11px;overflow:hidden;cursor:grab;border:1px solid var(--border);}'
+    +'.enc-sq *{pointer-events:none;-webkit-user-drag:none;}'
+    +'.enc-badge{font-size:9px;font-weight:700;color:#14110b;background:var(--accent);border-radius:5px;padding:1px 6px;margin-left:8px;vertical-align:middle;}'
+    +'.enc-btn{background:var(--accent);color:#14110b;border:none;border-radius:8px;padding:8px 16px;font-size:12px;font-weight:700;cursor:pointer;}'
+    +'.enc-btn:disabled{opacity:.55;cursor:default;}'
+    +'</style>';
+  html+='<div class="home-hdr"><h2>'+L('Encuestas de la comunidad','Community Polls')+'</h2><p>'+L('Arrastra héroes a una encuesta y vota. Tu voto es anónimo.','Drag heroes into a poll and vote. Your vote is anonymous.')+'</p></div>';
+  if(!sbReady()){
+    html+='<div class="enc-card" style="border-color:var(--amber)"><div style="font-size:13px;color:#f0c563;font-weight:600;margin-bottom:4px">'+L('⚙️ Falta configurar Supabase','⚙️ Supabase not configured')+'</div><div style="font-size:12px;color:var(--muted)">'+L('Pega tu clave sb_publishable_… en la variable SB_KEY dentro de index.html para activar las encuestas.','Paste your sb_publishable_… key into the SB_KEY variable in index.html to enable the polls.')+'</div></div>';
+  }
+  if(!heroes.length){
+    html+='<div class="enc-card"><div style="font-size:12px;color:var(--hint)">'+L('Primero abre Plantel y presiona “Actualizar Todo” para cargar la lista de héroes.','Open Plantel and press “Actualizar Todo” first to load the hero list.')+'</div></div>';
+  }
+  html+='<div class="enc-card"><div style="font-size:12px;color:var(--muted);margin-bottom:8px">'+L('Héroes — arrástralos a una encuesta','Heroes — drag them into a poll')+'</div><div class="enc-pal">';
+  heroes.forEach(function(h){
+    html+='<div class="enc-sq" draggable="true" title="'+h.name+'" ondragstart="pollDragStart(event,\''+h.id+'\')">'+hImg(h.id,heroInit(h.name),false)+'</div>';
+  });
+  html+='</div></div>';
+  ordered.forEach(function(p){
+    var per=periodFor(p.cadencia); var voted=hasVoted(p.id,per); var sel=pollSel[p.id]||[];
+    html+='<div class="enc-card">';
+    html+='<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px">'
+      +'<div style="font-size:15px;font-weight:600;color:var(--text)">'+L(p.titulo,p.titulo_en)+(p.nuevo?'<span class="enc-badge">NUEVO</span>':'')+'</div>'
+      +'<div style="font-size:11px;color:var(--hint)">'+(p.cadencia==='mensual'?L('Mensual','Monthly'):L('Semanal','Weekly'))+' · '+per+' · '+L('máx','max')+' '+p.max+'</div></div>';
+    if(voted){
+      html+='<div id="pollRes_'+p.id+'" style="margin-top:10px"></div>';
+    } else {
+      html+='<div class="enc-drop'+(sel.length>=p.max?' full':'')+'" ondragover="pollAllowDrop(event)" ondrop="pollDrop(event,\''+p.id+'\')">';
+      if(!sel.length){ html+='<span style="font-size:11px;color:var(--hint)">'+L('Arrastra hasta ','Drag up to ')+p.max+L(' héroes aquí…',' heroes here…')+'</span>'; }
+      sel.forEach(function(hid){
+        var nm=heroName(hid);
+        html+='<span class="enc-chip" onclick="pollRemove(\''+p.id+'\',\''+hid+'\')" title="Quitar"><span style="width:34px;height:34px;border-radius:7px;overflow:hidden;display:inline-block">'+hImg(hid,heroInit(nm),false)+'</span><span style="font-size:12px;color:var(--text)">'+nm+'</span><span style="color:var(--hint)">✕</span></span>';
+      });
+      html+='</div>';
+      html+='<div style="display:flex;align-items:center;gap:14px;margin-top:4px">'
+        +'<button class="enc-btn" id="pollBtn_'+p.id+'" onclick="pollSubmit(\''+p.id+'\')"'+(sel.length?'':' disabled')+'>'+L('Votar','Vote')+(sel.length?' ('+sel.length+')':'')+'</button>'
+        +'<span style="font-size:11px;color:var(--hint);cursor:pointer;text-decoration:underline" onclick="showPollResults(\''+p.id+'\')">'+L('Ver resultados','View results')+'</span></div>';
+      html+='<div id="pollRes_'+p.id+'" style="display:none;margin-top:10px"></div>';
+    }
+    html+='</div>';
+  });
+  document.getElementById('mainContent').innerHTML=html;
+  ordered.forEach(function(p){ if(hasVoted(p.id,periodFor(p.cadencia))) showPollResults(p.id); });
+}
+
+
+
+// ════════════════════════════════════════════════════════════════════════
+//  EXPORTAR IMAGEN 4K de la tier list (para redes sociales)
+// ════════════════════════════════════════════════════════════════════════
+function lcRoundRect(ctx,x,y,w,h,r){
+  if(ctx.roundRect){ ctx.beginPath(); ctx.roundRect(x,y,w,h,r); return; }
+  ctx.beginPath(); ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r); ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath();
+}
+function lcHeroColor(s){ var h=0; for(var i=0;i<s.length;i++){ h=(h*31+s.charCodeAt(i))>>>0; } return 'hsl('+(h%360)+',36%,42%)'; }
+async function lcLoadImg(src, cross){
+  return new Promise(function(res){
+    if(!src){ res(null); return; }
+    var im=new Image();
+    if(cross) im.crossOrigin='anonymous';
+    im.onload=function(){ res(im); };
+    im.onerror=function(){ res(null); };
+    im.src=src;
+  });
+}
+async function exportTierImage(){
+  var heroes=(appData.heroes||[]).slice().sort(function(a,b){return (b.wr||0)-(a.wr||0);});
+  if(!heroes.length){ alert(L('Primero presiona "Actualizar Todo" para cargar datos.','Press "Actualizar Todo" first to load data.')); return; }
+  var btn=document.querySelector('button[onclick="exportTierImage()"]');
+  var btnTxt=btn?btn.textContent:''; if(btn){ btn.disabled=true; btn.textContent=L('Generando…','Generating…'); }
+  try{
+    // preload banner (local, safe) + hero portraits (CORS-clean only)
+    var banner=await lcLoadImg('../assets/header-lacitadel-strip.jpg', false);
+    var imgs=await Promise.all(heroes.map(function(h){ return lcLoadImg(imgP(h.id), true); }));
+
+    var W=3840, M=140, rowH=92, rowsY;
+    var FONT="'Segoe UI', Arial, sans-serif";
+    // banner band keeps the art's 3200x600 ratio across full width
+    var bandH = banner ? Math.round(W*(600/3200)) : 0;
+    var headY = bandH + 70;            // title baseline area starts under banner
+    rowsY = headY + 410;
+    var H = rowsY + heroes.length*rowH + 170;
+
+    var cv=document.createElement('canvas'); cv.width=W; cv.height=H;
+    var x=cv.getContext('2d');
+    x.fillStyle='#14110b'; x.fillRect(0,0,W,H);
+    // banner on top
+    if(banner){ x.drawImage(banner, 0, 0, W, bandH); }
+    // gold accent under banner
+    x.fillStyle='#e6ad3e'; x.fillRect(0, bandH, W, 8);
+
+    x.textBaseline='alphabetic'; x.textAlign='left';
+    x.fillStyle='#e6ad3e'; x.font='700 92px '+FONT; x.fillText('LaCitadel', M, headY+92);
+    var tw=x.measureText('LaCitadel').width;
+    x.fillStyle='#a89878'; x.font='600 44px '+FONT; x.fillText('\u00b7 TIER LIST', M+tw+34, headY+92);
+    x.textAlign='right'; x.fillStyle='#f0c563'; x.font='700 58px '+FONT; x.fillText(getRankLabel(), W-M, headY+92); x.textAlign='left';
+    x.fillStyle='#cdbf9d'; x.font='400 40px '+FONT;
+    var sub=(totalSampleGames()>0?fmtCount(totalSampleGames())+' '+L('partidas analizadas','games analyzed'):L('Sin datos','No data'))
+      +'   \u00b7   '+L('Parche','Patch')+' '+(appData.patch||'\u2014')+(appData.updatedAt?('   \u00b7   '+appData.updatedAt):'');
+    x.fillText(sub, M, headY+162);
+    x.strokeStyle='rgba(230,173,62,.25)'; x.lineWidth=3; x.beginPath(); x.moveTo(M,headY+212); x.lineTo(W-M,headY+212); x.stroke();
+
+    var rankR=210, avX=240, avS=72, nameX=350, barX=1680, barW=760, wrX=2480, selX=2790, partX=3110, tierCx=3540;
+    var hY=headY+292;
+    x.fillStyle='#8a7c5f'; x.font='600 28px '+FONT;
+    x.textAlign='right'; x.fillText('#', rankR, hY); x.textAlign='left';
+    x.fillText(L('H\u00c9ROE','HERO'), nameX, hY);
+    x.fillText('WIN RATE', barX, hY);
+    x.fillText('SEL.', selX, hY);
+    x.fillText(L('PARTIDAS','GAMES'), partX, hY);
+    x.textAlign='center'; x.fillText('TIER', tierCx, hY); x.textAlign='left';
+
+    var tCol={S:'#e6ad3e',A:'#34c19a',B:'#5a96e0',C:'#e2554d',D:'#a89878'};
+    heroes.forEach(function(h,i){
+      var ry=rowsY+i*rowH, cy=ry+rowH/2;
+      if(i%2===1){ x.fillStyle='rgba(255,255,255,.03)'; x.fillRect(M-40, ry, W-2*(M-40), rowH); }
+      x.strokeStyle='rgba(230,173,62,.10)'; x.lineWidth=1; x.beginPath(); x.moveTo(M-40,ry); x.lineTo(W-(M-40),ry); x.stroke();
+      x.fillStyle='#8a7c5f'; x.font='600 36px '+FONT; x.textAlign='right'; x.fillText(String(i+1), rankR, cy+13); x.textAlign='left';
+      // avatar: real portrait if CORS-clean, else colored initials
+      var init=h.name.split(' ').map(function(w){return w[0];}).join('').slice(0,2).toUpperCase();
+      var ax=avX, ay=cy-avS/2, r=16;
+      x.save(); lcRoundRect(x, ax, ay, avS, avS, r); x.clip();
+      if(imgs[i]){
+        var im=imgs[i]; var iw=im.naturalWidth||im.width, ih=im.naturalHeight||im.height;
+        // cover-crop to square, anchored to top
+        var sc=Math.max(avS/iw, avS/ih); var dw=iw*sc, dh=ih*sc;
+        x.drawImage(im, ax+(avS-dw)/2, ay, dw, dh);
+      } else {
+        x.fillStyle=lcHeroColor(h.name); x.fillRect(ax,ay,avS,avS);
+        x.restore(); x.save();
+        x.fillStyle='#f2e8d4'; x.font='700 30px '+FONT; x.textAlign='center'; x.fillText(init, ax+avS/2, cy+11); x.textAlign='left';
+      }
+      x.restore();
+      x.fillStyle='#f2e8d4'; x.font='600 40px '+FONT; x.fillText(h.name, nameX, cy+14);
+      var p=h.wr?h.wr*100:0;
+      var c=!h.wr?'#a89878':(p>=52?'#4cc66a':(p>=49?'#e6ad3e':'#e2554d'));
+      var wf=h.wr?Math.max(.06,Math.min(1,(p-44)/12)):0;
+      lcRoundRect(x, barX, cy-10, barW, 20, 10); x.fillStyle='rgba(255,255,255,.08)'; x.fill();
+      if(wf>0){ lcRoundRect(x, barX, cy-10, barW*wf, 20, 10); x.fillStyle=c; x.fill(); }
+      x.fillStyle=c; x.font='700 40px '+FONT; x.fillText(h.wr?p.toFixed(1)+'%':'\u2014', wrX, cy+14);
+      x.fillStyle='#cdbf9d'; x.font='500 36px '+FONT; x.fillText(h.pick?(h.pick*100).toFixed(1)+'%':'\u2014', selX, cy+13);
+      x.fillStyle='#a89878'; x.fillText(h.matches?fmtCount(h.matches):'\u2014', partX, cy+13);
+      var tb=tCol[h.tier]||'#a89878'; var bw=86,bh=50;
+      lcRoundRect(x, tierCx-bw/2, cy-bh/2, bw,bh, 12); x.fillStyle=tb; x.fill();
+      x.fillStyle='#14110b'; x.font='800 34px '+FONT; x.textAlign='center'; x.fillText(h.tier||'\u2014', tierCx, cy+12); x.textAlign='left';
+    });
+    var fy=rowsY+heroes.length*rowH+90;
+    x.strokeStyle='rgba(230,173,62,.2)'; x.lineWidth=3; x.beginPath(); x.moveTo(M-40,fy-46); x.lineTo(W-(M-40),fy-46); x.stroke();
+    x.fillStyle='#8a7c5f'; x.font='400 32px '+FONT; x.textAlign='left';
+    x.fillText('Datos: deadlock-api.com \u00b7 desde el parche '+(appData.patch||''), M, fy);
+    x.fillStyle='#a89878'; x.font='600 32px '+FONT; x.textAlign='right';
+    x.fillText('Hecho en Puerto Rico \u00b7 LaCitadel \u00b7 por Chanlaser', W-M, fy); x.textAlign='left';
+
+    cv.toBlob(function(blob){
+      if(!blob){ alert(L('No se pudo generar la imagen.','Could not generate the image.')); if(btn){btn.disabled=false;btn.textContent=btnTxt;} return; }
+      var a=document.createElement('a'); a.href=URL.createObjectURL(blob);
+      a.download='lacitadel-tierlist-'+getRank()+'.png'; document.body.appendChild(a); a.click();
+      setTimeout(function(){ URL.revokeObjectURL(a.href); a.remove(); }, 3000);
+      if(btn){ btn.disabled=false; btn.textContent=btnTxt; }
+    }, 'image/png');
+  }catch(e){
+    if(btn){ btn.disabled=false; btn.textContent=btnTxt; }
+    alert(L('Error al exportar: ','Export error: ')+(e.message||e));
+  }
+}
+
+
+// ════════════════════════════════════════════════════════════════════════
+//  SOCIALES / SOCIALS
+// ════════════════════════════════════════════════════════════════════════
+function renderSocials(){
+  var socials=[
+    { name:'X',                          handle:'@Chanlaser_',                 url:'https://x.com/Chanlaser_',          color:'#1a1a1a', border:'#888888', icon:'X',  dark:false },
+    { name:'Twitch',                     handle:'twitch.tv/chanlaser',         url:'https://www.twitch.tv/chanlaser',   color:'#9146FF', border:'#9146FF', icon:'\u25B6', dark:false },
+    { name:'Kick',                       handle:'kick.com/chanlaser',          url:'https://kick.com/chanlaser',        color:'#53FC18', border:'#53FC18', icon:'K',  dark:true },
+    { name:L('Correo del dev','Dev email'), handle:'chanlaser@protonmail.com', url:'mailto:chanlaser@protonmail.com',   color:'#e6ad3e', border:'#e6ad3e', icon:'\u2709', dark:true }
+  ];
+  var html='<div class="home-hdr"><h2>'+L('Sociales','Socials')+'</h2><p>'+L('Sígueme en mis redes y mira mis streams en vivo','Follow me and catch my live streams')+'</p></div>';
+  html+='<div style="display:flex;flex-direction:column;gap:12px;max-width:560px">';
+  socials.forEach(function(sc){
+    var tc=sc.dark?'#14110b':'#ffffff';
+    html+='<a href="'+sc.url+'" target="_blank" rel="noopener" '
+      +'style="display:flex;align-items:center;gap:15px;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px 16px;text-decoration:none" '
+      +'onmouseover="this.style.borderColor=\''+sc.border+'\'" onmouseout="this.style.borderColor=\'var(--border)\'">'
+      +'<div style="width:48px;height:48px;border-radius:11px;background:'+sc.color+';display:flex;align-items:center;justify-content:center;font-size:23px;font-weight:800;color:'+tc+';flex-shrink:0;border:1px solid rgba(255,255,255,.10)">'+sc.icon+'</div>'
+      +'<div style="flex:1;min-width:0"><div style="font-size:15px;font-weight:600;color:var(--text)">'+sc.name+'</div>'
+      +'<div style="font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+sc.handle+'</div></div>'
+      +'<div style="font-size:12px;color:var(--accent);font-weight:600;flex-shrink:0">'+L('Abrir','Open')+' \u2192</div>'
+      +'</a>';
+  });
+  html+='</div>';
+  html+='<div style="font-size:11px;color:var(--hint);margin-top:18px">'+L('Hecho en Puerto Rico','Made in Puerto Rico')+' \uD83C\uDDF5\uD83C\uDDF7 \u00b7 LaCitadel \u00b7 por Chanlaser</div>';
+  document.getElementById('mainContent').innerHTML=html;
+}
+
+function bannerErr(el){ el.outerHTML='<div class="hero-banner-ph">Espacio reservado · banner de Pocket · 3200×600</div>'; }
+
 // ── INIT ──────────────────────────────────────────────────────────────────────
 checkTos();
 loadLogs();
 loadApp();
 populateRankSel();
+if(typeof populatePatchSel==='function') populatePatchSel();
 updateLogsBadge();
 updateLangPill();
 applyStaticLang();
 applyLang();
 renderSB();
-renderHome();
+setNav('roster');
+updatePatchBadge();
+setTimeout(function(){ try{ if(IS_ELECTRON && window.api && window.api.fetchPatchNotes){ loadPatchNotes(true); } else { updatePatchBadge(); } }catch(e){} }, 1500);
 
 // Show electron status
 const auLbl = document.getElementById('autoUpLabel');

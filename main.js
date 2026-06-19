@@ -43,7 +43,9 @@ async function loadHeroMap(){
     (Array.isArray(assets)?assets:[]).forEach(h=>{
       if(h.id && h.class_name){
         const slug = h.class_name.replace(/^hero_/,'').replace(/_/g,'-');
-        heroIdMap[slug] = h.id;
+        heroIdMap[slug] = h.id;                               // code-name slug (e.g. "inferno")
+        if(h.name) heroIdMap[slugify(h.name)] = h.id;         // public-name slug (e.g. "infernus")
+        if(h.name) heroIdMap[slugify(h.name.replace(/&/g,"and"))] = h.id; // "&" variant (Mo & Krill -> mo-and-krill)
         heroNameById[h.id] = h.name || slug;
       }
     });
@@ -54,7 +56,9 @@ async function loadHeroMap(){
 
 // Resolve a hero slug to numeric id: dynamic map first, hardcoded fallback
 function heroNumId(slug){
-  return heroIdMap[slug] || HERO_IDS[slug] || null;
+  const id = heroIdMap[slug];
+  if(!id) console.log('[hero-id] sin resolver (no en assets):', slug);
+  return id || null;
 }
 
 // ── WINDOW ────────────────────────────────────────────────────────────────
@@ -78,6 +82,7 @@ function createWindow(){
 // Register asset protocol so src/index.html can load ../assets/ files
 const { protocol } = require('electron');
 app.whenReady().then(() => {
+  console.log('=== LaCitadel main.js LOADED · build: PATCH-FIX title/pub_date · 2026-06-17 ===');
   protocol.registerFileProtocol('asset', (request, callback) => {
     const filePath = request.url.replace('asset://', '');
     callback(path.join(__dirname, filePath));
@@ -186,24 +191,38 @@ function getItemInfo(abilityId){
 }
 
 // ── PHASE 1: HERO STATS ───────────────────────────────────────────────────
-async function fetchHeroStats(minBadge=90){
-  const [statsRes, assetsRes] = await Promise.all([
-    fetchUrl(`https://api.deadlock-api.com/v1/analytics/hero-stats?min_average_badge=${minBadge}`, {timeout:15000}),
-    fetchUrl('https://api.deadlock-api.com/v1/assets/heroes?language=english', {timeout:15000}),
-  ]);
-  const stats  = JSON.parse(statsRes.body);
-  const assets = JSON.parse(assetsRes.body);
-  const heroMap = {};
-  (Array.isArray(assets)?assets:[]).forEach(h=>{
-    heroMap[h.id] = {name:h.name||'', cls:h.class_name||''};
-    if(h.id && h.class_name){
-      const slug = h.class_name.replace(/^hero_/,'').replace(/_/g,'-');
-      heroIdMap[slug] = h.id;
-      heroNameById[h.id] = h.name || slug;
-    }
-  });
-  heroMapLoaded = true;
-  console.log('[hero-stats] stats:', stats.length, 'assets:', Object.keys(heroMap).length);
+let assetHeroMap = null;   // cached hero assets (names/classes) so repeat windows skip the assets fetch
+async function fetchHeroStats(minBadge=0, minTs=0, maxTs=0, reuseAssets=false){
+  let statsUrl = `https://api.deadlock-api.com/v1/analytics/hero-stats?min_average_badge=${minBadge}`;
+  if(minTs>0) statsUrl += `&min_unix_timestamp=${minTs}`;
+  if(maxTs>0) statsUrl += `&max_unix_timestamp=${maxTs}`;
+  let stats, heroMap;
+  if(reuseAssets && assetHeroMap){
+    const statsRes = await fetchUrl(statsUrl, {timeout:15000});
+    stats   = JSON.parse(statsRes.body);
+    heroMap = assetHeroMap;
+  } else {
+    const [statsRes, assetsRes] = await Promise.all([
+      fetchUrl(statsUrl, {timeout:15000}),
+      fetchUrl('https://api.deadlock-api.com/v1/assets/heroes?language=english', {timeout:15000}),
+    ]);
+    stats  = JSON.parse(statsRes.body);
+    const assets = JSON.parse(assetsRes.body);
+    heroMap = {};
+    (Array.isArray(assets)?assets:[]).forEach(h=>{
+      heroMap[h.id] = {name:h.name||'', cls:h.class_name||''};
+      if(h.id && h.class_name){
+        const slug = h.class_name.replace(/^hero_/,'').replace(/_/g,'-');
+        heroIdMap[slug] = h.id;                               // code-name slug
+        if(h.name) heroIdMap[slugify(h.name)] = h.id;         // public-name slug
+        if(h.name) heroIdMap[slugify(h.name.replace(/&/g,"and"))] = h.id; // "&" variant
+        heroNameById[h.id] = h.name || slug;
+      }
+    });
+    assetHeroMap = heroMap;
+    heroMapLoaded = true;
+  }
+  console.log('[hero-stats] stats:', stats.length, 'minTs:', minTs, 'maxTs:', maxTs);
   // The /v1/analytics/hero-stats response has NO pick_rate field. It returns
   // { hero_id, wins, losses, matches, matches_per_bucket, ... }.
   //  · win rate = wins / matches
@@ -212,29 +231,24 @@ async function fetchHeroStats(minBadge=90){
   //    Fallback to the sum of matches if the field is missing, then to any
   //    pick_rate field a future API version might add.
   const totalMatches = stats.reduce((s,h)=> s + (Number(h.matches)||0), 0) || 1;
+  const totalGames = totalMatches / 12;   // Deadlock = 12 heroes per match (6v6)
   return stats.map(h=>{
     const asset = heroMap[h.hero_id] || {};
     const name  = asset.name || ('Hero '+h.hero_id);
     const matches = Number(h.matches) || 0;
     const wr    = matches ? h.wins/matches : parseFloat(h.win_rate||0);
-    const bucketTotal = Number(h.matches_per_bucket) || 0;
-    const pick  = bucketTotal ? matches / bucketTotal
-                : parseFloat(h.pick_rate || h.picks_rate || 0) || (matches / totalMatches);
+    const pick  = totalGames ? Math.min(1, matches / totalGames) : 0;   // % of games this hero appears in
     const id    = asset.cls ? asset.cls.replace(/^hero_/,'').replace(/_/g,'-') : slugify(name);
     return { id, name, wr, pick, matches };
-  }).filter(h=>h.id && h.name && h.wr>0);
+  }).filter(h=>h.id && h.name && !/^Hero \d+$/.test(h.name) && h.matches>0);
 }
 
 // ── HERO NUMERIC ID MAP ───────────────────────────────────────────────────
-const HERO_IDS = {
-  'graves':1,'abrams':2,'lash':3,'infernus':4,'shiv':6,'haze':7,'dynamo':8,
-  'grey-talon':10,'mo-and-krill':11,'pocket':13,'seven':15,'vindicta':16,
-  'lady-geist':18,'bebop':20,'kelvin':21,'ivy':22,'paradox':25,'warden':27,
-  'yamato':31,'mcginnis':37,'wraith':38,'calico':40,'holliday':50,'vyper':51,
-  'sinclair':52,'rem':54,'billy':58,'victor':59,'drifter':60,'the-doorman':61,
-  'silver':62,'celeste':63,'apollo':64,'mina':65,'venator':66,'paige':67,
-  'viscous':68,'mirage':39,
-};
+// ── HERO NUMERIC ID — single source of truth ──────────────────────────────
+// No hardcoded ID map. IDs come ONLY from the live assets endpoint (loadHeroMap
+// / fetchHeroStats build heroIdMap from class_name). Hardcoded numbers go stale
+// the moment Valve renumbers or adds heroes — which is exactly what broke
+// McGinnis/Ivy/Silver/etc. (their old hardcoded ids 37/22/62 no longer match).
 
 // ── PHASE 2: HERO BUILDS ──────────────────────────────────────────────────
 // Endpoint: api.deadlock-api.com/v1/builds?hero_id=N
@@ -321,7 +335,7 @@ async function fetchHeroBuild(heroId){
 }
 
 // ── PHASE 3: ITEM STATS ───────────────────────────────────────────────────
-async function fetchItemStats(heroId, minBadge=90){
+async function fetchItemStats(heroId, minBadge=0){
   await loadHeroMap();
   const numId = heroNumId(heroId);
   if(!numId) return null;
@@ -380,7 +394,7 @@ function rankLabelFromRanked(rr, sr){
   return sub ? (tier+' '+sub) : tier;
 }
 
-async function fetchLeaderboard(region='sa', minBadge=90){
+async function fetchLeaderboard(region='sa', minBadge=0){
   await loadHeroMap();
   const regionName = REGION_NAMES[region] || 'SAmerica';
   const url = `https://api.deadlock-api.com/v1/leaderboard/${regionName}`;
@@ -410,7 +424,7 @@ async function fetchLeaderboard(region='sa', minBadge=90){
 //   GET /v1/analytics/hero-counter-stats?min_average_badge=<b>
 //   rows: { hero_id, enemy_hero_id, wins, matches_played, ... }  (1406 rows)
 // For OUR hero: each row's enemy_hero_id is the opponent; wr = wins/matches_played.
-async function fetchHeroCounters(heroId, minBadge=90){
+async function fetchHeroCounters(heroId, minBadge=0){
   try{
     await loadHeroMap();
     const numId = heroNumId(heroId);
@@ -419,7 +433,7 @@ async function fetchHeroCounters(heroId, minBadge=90){
     const res = await fetchUrl(url, {timeout:15000});
     const data = JSON.parse(res.body);
     if(!Array.isArray(data)) return null;
-    const rows = data.filter(r => (r.hero_id===numId) && r.enemy_hero_id && (r.matches_played||0) >= 20);
+    const rows = data.filter(r => (r.hero_id===numId) && r.enemy_hero_id && (r.matches_played||0) >= 15);
     const mapped = rows.map(r => {
       const m = Number(r.matches_played) || 0;
       return {
@@ -447,7 +461,7 @@ async function fetchHeroCounters(heroId, minBadge=90){
 //   rows: { hero_id1, hero_id2, wins, matches_played, ... }  (703 rows)
 // Each row is an unordered pair. Keep rows containing OUR hero; the ally is
 // whichever of hero_id1/hero_id2 is not us. wr = wins/matches_played.
-async function fetchHeroSynergies(heroId, minBadge=90){
+async function fetchHeroSynergies(heroId, minBadge=0){
   await loadHeroMap();
   const numId = heroNumId(heroId);
   if(!numId) return null;
@@ -456,7 +470,7 @@ async function fetchHeroSynergies(heroId, minBadge=90){
   const data = JSON.parse(res.body);
   if(!Array.isArray(data)) return null;
   const rows = data.filter(r =>
-    (r.hero_id1===numId || r.hero_id2===numId) && (r.matches_played||0) >= 20);
+    (r.hero_id1===numId || r.hero_id2===numId) && (r.matches_played||0) >= 15);
   const mapped = rows.map(r => {
     const allyId = r.hero_id1===numId ? r.hero_id2 : r.hero_id1;
     const m = Number(r.matches_played) || 0;
@@ -474,36 +488,32 @@ async function fetchHeroSynergies(heroId, minBadge=90){
 
 async function fetchPatchNotes(){
   try{
-    const res = await fetchUrl('https://api.deadlock-api.com/v1/patches', {timeout:12000});
+    const res = await fetchUrl('https://api.steampowered.com/ISteamNews/GetNewsForApp/v2/?appid=1422450&count=30', {timeout:12000});
     const data = JSON.parse(res.body);
-    const arr = Array.isArray(data) ? data : (data.patches||[]);
-    // Real shape (patch-check, Jun 2026): RSS del foro oficial —
-    // {title, pub_date, link, content_encoded (HTML), author, ...}
-    return arr.slice(0,10).map(p=>{
-      // Sacar un resumen legible del HTML del foro
-      let summary = '';
-      const html = p.content_encoded || '';
-      const snip = html.match(/contentRow-snippet[^>]*>([\s\S]*?)<\/div>/);
-      summary = (snip ? snip[1] : html)
-        .replace(/<[^>]+>/g,' ')
-        .replace(/&gt;/g,'>').replace(/&lt;/g,'<').replace(/&amp;/g,'&')
-        .replace(/&quot;/g,'"').replace(/&#0?39;/g,"'").replace(/&nbsp;/g,' ')
-        .replace(/\s+/g,' ').trim().slice(0,400);
+    const items = (data.appnews && data.appnews.newsitems) || [];
+    // Official Valve posts only (feed_type 1) whose title looks like a patch — drops press articles
+    const patches = items.filter(it => Number(it.feed_type)===1 && /update|hotfix|gameplay|patch/i.test(it.title||''));
+    console.log('[patch-notes] steam items:', items.length, '| patch posts:', patches.length);
+    return patches.slice(0,15).map(it=>{
+      const ts = Number(it.date)||0;
+      const dateStr = ts ? new Date(ts*1000).toISOString().slice(0,10) : '';
+      const gid = it.gid || '';
       return {
-        name:    p.title || p.patch_name || p.name || p.version || '',
-        date:    (p.pub_date || p.patch_date || p.date || '').slice(0,10),
-        summary: summary,
-        url:     p.link || p.url || 'https://forums.playdeadlock.com/forums/changelog.10/',
+        name: it.title || 'Update',
+        date: dateStr,
+        ts: ts,
+        summary: it.contents || '',
+        url: gid ? ('https://steamcommunity.com/games/1422450/announcements/detail/'+gid) : 'https://steamcommunity.com/games/1422450/announcements'
       };
     });
-  }catch(e){ return []; }
+  }catch(e){ console.log('[patch-notes] ERROR', e.message); return []; }
 }
 
 // ── IPC HANDLERS ──────────────────────────────────────────────────────────
-ipcMain.handle('fetch-hero-stats', async(_, badge) => {
+ipcMain.handle('fetch-hero-stats', async(_, badge, minTs, maxTs, reuseAssets) => {
   try {
-    const data = await fetchHeroStats(badge||90);
-    console.log('[hero-stats] Success:', data.length, 'heroes');
+    const data = await fetchHeroStats(badge||0, minTs||0, maxTs||0, !!reuseAssets);
+    console.log('[hero-stats] Success:', data.length, 'heroes', '| minTs:', minTs||0, 'maxTs:', maxTs||0);
     return { ok:true, data };
   } catch(e) {
     console.error('[hero-stats] ERROR:', e.message||e.code||String(e));
@@ -522,10 +532,10 @@ ipcMain.handle('fetch-hero-build', async(_, id) => {
   }
 });
 
-ipcMain.handle('fetch-item-stats',  async(_,id,b)=> { try{ return {ok:true,data:await fetchItemStats(id,b||90)}; }catch(e){ return {ok:false,error:e.message}; } });
-ipcMain.handle('fetch-leaderboard', async(_,r,b)=>  { try{ return {ok:true,data:await fetchLeaderboard(r||'sa',b||90)}; }catch(e){ return {ok:false,error:e.message}; } });
-ipcMain.handle('fetch-hero-counters',  async(_,id,b)=> { try{ return {ok:true,data:await fetchHeroCounters(id,b||90)}; }catch(e){ return {ok:false,error:e.message}; } });
-ipcMain.handle('fetch-hero-synergies', async(_,id,b)=> { try{ return {ok:true,data:await fetchHeroSynergies(id,b||90)}; }catch(e){ return {ok:false,error:e.message}; } });
+ipcMain.handle('fetch-item-stats',  async(_,id,b)=> { try{ return {ok:true,data:await fetchItemStats(id,b||0)}; }catch(e){ return {ok:false,error:e.message}; } });
+ipcMain.handle('fetch-leaderboard', async(_,r,b)=>  { try{ return {ok:true,data:await fetchLeaderboard(r||'sa',b||0)}; }catch(e){ return {ok:false,error:e.message}; } });
+ipcMain.handle('fetch-hero-counters',  async(_,id,b)=> { try{ return {ok:true,data:await fetchHeroCounters(id,b||0)}; }catch(e){ return {ok:false,error:e.message}; } });
+ipcMain.handle('fetch-hero-synergies', async(_,id,b)=> { try{ return {ok:true,data:await fetchHeroSynergies(id,b||0)}; }catch(e){ return {ok:false,error:e.message}; } });
 ipcMain.handle('fetch-patch-notes', async()=>       { try{ return {ok:true,data:await fetchPatchNotes()}; }catch(e){ return {ok:false,error:e.message}; } });
 ipcMain.handle('get-app-version',   async()=>       app.getVersion());
 
