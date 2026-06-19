@@ -1,6 +1,6 @@
 {
   "name": "lacitadel",
-  "version": "1.0.2",
+  "version": "1.0.4",
   "description": "Deadlock community stats dashboard \u2014 open project, free forever",
   "main": "main.js",
   "homepage": "./",
@@ -69,9 +69,11 @@
   ],
   "author": "Chanlaser \u2014 open community project",
   "license": "MIT",
+  "dependencies": {
+    "electron-updater": "^6.1.0"
+  },
   "devDependencies": {
     "electron": "^31.0.0",
-    "electron-builder": "^24.0.0",
-    "electron-updater": "^6.1.0"
+    "electron-builder": "^24.0.0"
   }
 }

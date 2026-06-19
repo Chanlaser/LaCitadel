@@ -15,8 +15,21 @@
 
 const { app, BrowserWindow, ipcMain, shell } = require('electron');
 const path  = require('path');
+const fs    = require('fs');
 const https = require('https');
 const http  = require('http');
+
+// ── LIGHTWEIGHT UPDATE LOGGER (built-in fs, no extra package) ─────────────
+// Writes to %APPDATA%/LaCitadel/update.log so auto-update behavior is debuggable.
+// (Long-term TODO: replace with electron-log for rotation/levels.)
+function updLog(msg){
+  try {
+    const dir = app.getPath('userData');
+    const line = '[' + new Date().toISOString() + '] ' + msg + '\n';
+    fs.appendFileSync(path.join(dir, 'update.log'), line);
+    console.log('[update]', msg);
+  } catch(e) { console.log('[update] (log write failed)', msg); }
+}
 
 const USER_AGENT         = 'LaCitadel/1.0 (community tool; never-breaks-tos)';
 const UPDATE_INTERVAL_MS = 6 * 60 * 60 * 1000;
@@ -510,10 +523,10 @@ async function fetchPatchNotes(){
 }
 
 // ── IPC HANDLERS ──────────────────────────────────────────────────────────
-ipcMain.handle('fetch-hero-stats', async(_, badge, minTs, maxTs, reuseAssets) => {
+ipcMain.handle('fetch-hero-stats', async(_, badge) => {
   try {
-    const data = await fetchHeroStats(badge||0, minTs||0, maxTs||0, !!reuseAssets);
-    console.log('[hero-stats] Success:', data.length, 'heroes', '| minTs:', minTs||0, 'maxTs:', maxTs||0);
+    const data = await fetchHeroStats(badge||0);
+    console.log('[hero-stats] Success:', data.length, 'heroes');
     return { ok:true, data };
   } catch(e) {
     console.error('[hero-stats] ERROR:', e.message||e.code||String(e));
@@ -555,17 +568,22 @@ try {
   autoUpdater = au;
   autoUpdater.autoDownload = false;
   autoUpdater.autoInstallOnAppQuit = false;
-  autoUpdater.on('update-available',    info => { if(mainWindow&&!mainWindow.isDestroyed()) mainWindow.webContents.send('app-update-available',    {version:info.version,releaseDate:info.releaseDate,releaseNotes:info.releaseNotes||''}); });
-  autoUpdater.on('update-not-available',()   => { if(mainWindow&&!mainWindow.isDestroyed()) mainWindow.webContents.send('app-update-not-available'); });
+  updLog('electron-updater loaded; current app version ' + app.getVersion());
+  autoUpdater.on('checking-for-update', ()  => updLog('checking-for-update...'));
+  autoUpdater.on('update-available',    info => { updLog('UPDATE AVAILABLE: v' + info.version); if(mainWindow&&!mainWindow.isDestroyed()) mainWindow.webContents.send('app-update-available',    {version:info.version,releaseDate:info.releaseDate,releaseNotes:info.releaseNotes||''}); });
+  autoUpdater.on('update-not-available',(info) => { updLog('no update available (latest is v' + (info&&info.version) + ')'); if(mainWindow&&!mainWindow.isDestroyed()) mainWindow.webContents.send('app-update-not-available'); });
   autoUpdater.on('download-progress',   p    => { if(mainWindow&&!mainWindow.isDestroyed()) mainWindow.webContents.send('app-update-progress', Math.round(p.percent)); });
-  autoUpdater.on('update-downloaded',   ()   => { if(mainWindow&&!mainWindow.isDestroyed()) mainWindow.webContents.send('app-update-downloaded'); });
-  autoUpdater.on('error',               err  => { if(mainWindow&&!mainWindow.isDestroyed()) mainWindow.webContents.send('app-update-error', err.message); });
-} catch(e) { console.log('electron-updater not available:', e.message); }
+  autoUpdater.on('update-downloaded',   ()   => { updLog('update downloaded, ready to install'); if(mainWindow&&!mainWindow.isDestroyed()) mainWindow.webContents.send('app-update-downloaded'); });
+  autoUpdater.on('error',               err  => { updLog('ERROR: ' + (err && (err.stack||err.message||err))); if(mainWindow&&!mainWindow.isDestroyed()) mainWindow.webContents.send('app-update-error', err.message); });
+} catch(e) { updLog('electron-updater NOT available: ' + e.message); }
 
-ipcMain.handle('check-for-update', async() => { if(!autoUpdater) return {ok:false,error:'updater not available'}; try{ await autoUpdater.checkForUpdates(); return {ok:true}; }catch(e){ return {ok:false,error:e.message}; } });
-ipcMain.handle('download-update',  async() => { if(!autoUpdater) return {ok:false}; try{ await autoUpdater.downloadUpdate(); return {ok:true}; }catch(e){ return {ok:false,error:e.message}; } });
+ipcMain.handle('check-for-update', async() => { if(!autoUpdater) return {ok:false,error:'updater not available'}; try{ await autoUpdater.checkForUpdates(); return {ok:true}; }catch(e){ updLog('manual check error: '+e.message); return {ok:false,error:e.message}; } });
+ipcMain.handle('download-update',  async() => { if(!autoUpdater) return {ok:false}; try{ await autoUpdater.downloadUpdate(); return {ok:true}; }catch(e){ updLog('download error: '+e.message); return {ok:false,error:e.message}; } });
 ipcMain.on('install-update', () => { if(autoUpdater) autoUpdater.quitAndInstall(); });
 
 app.whenReady().then(() => {
-  setTimeout(() => { if(autoUpdater) autoUpdater.checkForUpdates().catch(()=>{}); }, 30000);
+  setTimeout(() => {
+    if(autoUpdater){ updLog('launch check firing (30s after ready)'); autoUpdater.checkForUpdates().catch(err => updLog('launch check rejected: ' + (err && (err.stack||err.message||err)))); }
+    else { updLog('launch check skipped — autoUpdater is null'); }
+  }, 30000);
 });

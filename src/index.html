@@ -282,13 +282,19 @@ tr.hl td:first-child{border-left:2px solid rgba(52,211,153,.28);padding-left:6px
 .upd-close.show{display:inline-block;}
 .upd-progress{height:3px;background:var(--surface2);border-radius:2px;margin-bottom:16px;overflow:hidden;}
 .upd-progress-bar{height:100%;background:var(--green);border-radius:2px;transition:width .4s;}
-.app-update-bar{display:none;background:rgba(230,173,62,.10);border-bottom:1px solid rgba(230,173,62,.3);padding:6px 18px;align-items:center;gap:10px;font-size:11px;color:#f0c563;cursor:pointer;}
+.app-update-bar{display:none;position:fixed;inset:0;z-index:9999;background:rgba(8,7,4,.78);backdrop-filter:blur(3px);align-items:center;justify-content:center;}
 .app-update-bar.show{display:flex;}
+.app-update-modal{background:linear-gradient(160deg,#1c1812,#14110b);border:1px solid rgba(230,173,62,.45);border-radius:14px;padding:28px 30px;max-width:420px;width:88%;text-align:center;box-shadow:0 0 0 1px rgba(230,173,62,.15),0 18px 60px rgba(0,0,0,.6);animation:updModalPulse 2s ease-in-out infinite;}
+@keyframes updModalPulse{0%,100%{box-shadow:0 0 0 1px rgba(230,173,62,.15),0 18px 60px rgba(0,0,0,.6);}50%{box-shadow:0 0 22px 4px rgba(230,173,62,.4),0 18px 60px rgba(0,0,0,.6);}}
+.app-update-modal .upd-icon{font-size:34px;margin-bottom:6px;}
+.app-update-modal h3{margin:0 0 8px;color:#e6ad3e;font-size:17px;font-weight:800;}
+.app-update-modal p{margin:0 0 18px;color:#d8cdb6;font-size:13px;line-height:1.45;}
+.app-update-modal .upd-ver{color:#f0c563;font-weight:700;}
 .hero-banner{width:100%;aspect-ratio:3200/600;height:auto;object-fit:cover;display:block;flex-shrink:0;}
 .hero-banner-ph{width:100%;height:62px;display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--hint);border-bottom:1px solid var(--border);background:repeating-linear-gradient(45deg,rgba(230,173,62,.05),rgba(230,173,62,.05) 10px,transparent 10px,transparent 20px);}
 .app-update-bar strong{color:#e6ad3e;}
-.app-update-bar .upd-action{background:#e6ad3e;color:#14110b;border:none;border-radius:4px;padding:3px 12px;font-size:11px;font-weight:700;cursor:pointer;margin-left:auto;flex-shrink:0;}
-.app-update-bar .upd-dismiss{color:#7a7a88;font-size:18px;cursor:pointer;line-height:1;flex-shrink:0;}
+.app-update-bar .upd-action{background:#e6ad3e;color:#14110b;border:none;border-radius:7px;padding:9px 22px;font-size:13px;font-weight:800;cursor:pointer;}
+.app-update-bar .upd-dismiss{display:block;margin:12px auto 0;color:#7a7a88;font-size:12px;cursor:pointer;background:none;border:none;text-decoration:underline;}
 .rank-dot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:4px;vertical-align:middle;}
 .nav-tabs{display:flex;gap:1px;padding:0 18px;background:var(--surface);border-bottom:1px solid var(--border);}
 .nav-tab{padding:8px 16px;font-size:12px;cursor:pointer;border-bottom:2px solid transparent;color:var(--muted);user-select:none;font-weight:500;}
@@ -437,11 +443,15 @@ tr.hl td:first-child{border-left:2px solid rgba(52,211,153,.28);padding-left:6px
 </header>
 
 <img id="heroBanner" class="hero-banner" src="../assets/header-lacitadel-strip.jpg" alt="LaCitadel" onerror="bannerErr(this)">
-<div class="app-update-bar" id="appUpdateBar" onclick="handleUpdateClick()">
-  <span id="appUpdateMsg">⬆ <strong>Nueva versión disponible</strong> · Pending update — <span id="appUpdateVersion"></span></span>
-  <span id="appUpdateProgress" style="display:none;color:var(--green)">Descargando... <span id="appUpdatePct">0</span>%</span>
-  <button class="upd-action" id="appUpdateBtn">Instalar</button>
-  <span class="upd-dismiss" onclick="event.stopPropagation();dismissUpdate()" title="Dismiss">×</span>
+<div class="app-update-bar" id="appUpdateBar">
+  <div class="app-update-modal">
+    <div class="upd-icon">⬆️</div>
+    <h3 id="appUpdateTitle">Nueva versión disponible</h3>
+    <p id="appUpdateMsg">Hay una actualización lista — <span class="upd-ver" id="appUpdateVersion"></span></p>
+    <p id="appUpdateProgress" style="display:none;color:var(--green)">Descargando... <span id="appUpdatePct">0</span>%</p>
+    <button class="upd-action" id="appUpdateBtn" onclick="handleUpdateClick()">Descargar e instalar</button>
+    <button class="upd-dismiss" onclick="dismissUpdate()" id="appUpdateDismiss">Ahora no</button>
+  </div>
 </div>
 
 <div class="nav-tabs" id="navTabs">
@@ -2924,8 +2934,15 @@ if(IS_ELECTRON){
   window.api.onAppUpdateAvailable((info) => {
     const bar = document.getElementById('appUpdateBar');
     const ver = document.getElementById('appUpdateVersion');
+    const title = document.getElementById('appUpdateTitle');
+    const msg = document.getElementById('appUpdateMsg');
+    const btn = document.getElementById('appUpdateBtn');
+    const dis = document.getElementById('appUpdateDismiss');
+    if(title) title.textContent = L('¡Nueva versión disponible!','New version available!');
+    if(msg) msg.innerHTML = L('Hay una actualización lista — ','An update is ready — ') + '<span class="upd-ver" id="appUpdateVersion">v'+info.version+'</span>';
+    if(btn) btn.textContent = L('Descargar e instalar','Download & install');
+    if(dis) dis.textContent = L('Ahora no','Not now');
     if(bar) bar.classList.add('show');
-    if(ver) ver.textContent = 'v' + info.version;
   });
 
   window.api.onAppUpdateProgress((pct) => {
@@ -2933,7 +2950,7 @@ if(IS_ELECTRON){
     const prog = document.getElementById('appUpdateProgress');
     const pctEl = document.getElementById('appUpdatePct');
     if(msg)  msg.style.display  = 'none';
-    if(prog) prog.style.display = 'inline';
+    if(prog){ prog.style.display = 'block'; prog.firstChild.textContent = L('Descargando... ','Downloading... '); }
     if(pctEl) pctEl.textContent = pct;
   });
 
@@ -2941,23 +2958,27 @@ if(IS_ELECTRON){
     updateReady = true;
     const btn  = document.getElementById('appUpdateBtn');
     const prog = document.getElementById('appUpdateProgress');
+    const msg  = document.getElementById('appUpdateMsg');
     if(prog) prog.style.display = 'none';
+    if(msg){ msg.style.display='block'; msg.textContent = L('Descarga completa. Reinicia para instalar.','Download complete. Restart to install.'); }
     if(btn){
-      btn.textContent = '↻ Reiniciar / Restart';
+      btn.textContent = L('↻ Reiniciar ahora','↻ Restart now');
       btn.style.background = 'var(--green)';
     }
   });
 
   window.api.onAppUpdateError((msg) => {
-    const bar = document.getElementById('appUpdateBar');
-    if(bar) bar.innerHTML = '<span style="color:var(--red)">⚠ Update error: '+msg+'</span><span class="upd-dismiss" onclick="dismissUpdate()">×</span>';
+    const t = document.getElementById('appUpdateTitle');
+    const m = document.getElementById('appUpdateMsg');
+    if(t) t.textContent = L('Error de actualización','Update error');
+    if(m){ m.style.display='block'; m.style.color='var(--red)'; m.textContent = msg; }
   });
 
   window.handleUpdateClick = function(){
     if(updateReady){ window.api.installUpdate(); }
     else {
       const btn = document.getElementById('appUpdateBtn');
-      if(btn){ btn.textContent = 'Descargando...'; btn.disabled = true; }
+      if(btn){ btn.textContent = L('Descargando...','Downloading...'); btn.disabled = true; }
       window.api.downloadUpdate();
     }
   };
