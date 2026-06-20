@@ -436,7 +436,7 @@ tr.hl td:first-child{border-left:2px solid rgba(52,211,153,.28);padding-left:6px
       <span id="langEn" class="lp-opt" onclick="setLang('en')">EN</span>
     </div>
     <span class="pbadge" id="patchLabel">—</span>
-    <select id="patchSel" title="Parche / Patch" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:5px;padding:3px 8px;font-size:11px;cursor:pointer;outline:none;max-width:150px;" onchange="selectPatch(this.value)"></select>
+    <select id="patchSel" title="Parche / Patch" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:5px;padding:3px 8px;font-size:11px;cursor:pointer;outline:none;max-width:150px;" onchange="selectWindow(this.value)"></select>
     <select id="rankSel" title="Rank filter — applied when pressing Update" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:5px;padding:3px 8px;font-size:11px;cursor:pointer;outline:none;max-width:160px;" onchange="setRank(this.value)"></select>
     <button class="upd-btn" id="updateBtn" onclick="runUpdate()">↻ Actualizar Todo</button>
   </div>
@@ -515,7 +515,6 @@ tr.hl td:first-child{border-left:2px solid rgba(52,211,153,.28);padding-left:6px
  *  DATA SOURCES (all public, community-run):
  *    - deadlock-api.com  — open source community API
  *    - deadlock.coach    — community builds & guides
- *    - metabot.gg        — stats (powered by deadlock-api.com)
  *    - deadlocklabs.gg   — hero images via Cloudflare R2
  *
  *  FUTURE WEBSITE NOTES:
@@ -1146,18 +1145,35 @@ function toId(n){return n.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-
 // Win rate is shrunk toward 50% based on sample size (empirical-Bayes style),
 // so low-match heroes can't fluke into top tiers. Tier cutoffs then run on the
 // ADJUSTED win rate. K = shrinkage strength (Moderate). Higher K = stricter.
-const TIER_SHRINK_K = 4000;      // ~matches needed before WR is half-trusted
+var TIER_SHRINK_K = 4000;        // dynamic — recomputed per dataset from median sample (see computeShrinkK)
 const LOW_SAMPLE_MATCHES = 2500; // below this, hero is flagged "muestra baja"
+// Adaptive shrinkage: K scales with the dataset's typical sample size so that
+// small windows (24h ≈ 1k matches/hero) don't collapse everyone toward 50%,
+// while full-patch windows (≈30k/hero) still get strong stability.
+// K = clamp(median_matches * 0.35, 150, 5000).
+function computeShrinkK(heroes){
+  var ms=(heroes||[]).map(function(h){return Number(h.matches)||0;}).filter(function(x){return x>0;}).sort(function(a,b){return a-b;});
+  if(!ms.length) return 4000;
+  var med = ms[Math.floor(ms.length/2)];
+  var k = Math.round(med * 0.35);
+  if(k < 150) k = 150;
+  if(k > 5000) k = 5000;
+  return k;
+}
 function adjustWr(w, matches){
   var m = Number(matches) || 0;
   if(m <= 0) return 0.50;                       // no data → neutral
   return 0.50 + (w - 0.50) * (m / (m + TIER_SHRINK_K));
 }
-function lowSample(matches){ return (Number(matches)||0) < LOW_SAMPLE_MATCHES; }
+function lowSample(matches){
+  // flag only when this hero's sample is well below the window's typical sample
+  var floor = Math.min(LOW_SAMPLE_MATCHES, Math.round(TIER_SHRINK_K * 0.6));
+  return (Number(matches)||0) < floor;
+}
 function toTier(w, matches){
   // matches optional for back-compat; if omitted, no shrinkage (raw cutoffs).
   var aw = (matches===undefined || matches===null) ? w : adjustWr(w, matches);
-  if(aw>=.54)return'S';if(aw>=.52)return'A';if(aw>=.49)return'B';if(aw>=.47)return'C';return'D';
+  if(aw>=.555)return'S+';if(aw>=.535)return'S';if(aw>=.515)return'A';if(aw>=.49)return'B';if(aw>=.47)return'C';return'D';
 }
 function daysSince(d){return Math.floor((Date.now()-new Date(d))/(864e5));}
 function hoursSince(d){return Math.floor((Date.now()-new Date(d))/36e5);}
@@ -1215,10 +1231,12 @@ function renderHome(){
 }
 // ── TIER LIST VIEW (v1.1) ──────────────────────────────────────────────────
 function renderTierList(){
-  const tCol={S:'#e6ad3e',A:'#34c19a',B:'#5a96e0',C:'#e2554d',D:'#a89878'};
+  const tCol={'S+':'#ff9d3c','S':'#e6ad3e','A':'#34c19a','B':'#5a96e0','C':'#e2554d','D':'#a89878'};
   const lu=appData.updatedAt;
   const heroes=(appData.heroes||[]).slice().sort((a,b)=>(b.wr||0)-(a.wr||0));
   const wrCol=p=> p>=52?'var(--green)':(p>=49?'var(--amber)':'var(--red)');
+  if(typeof appData.plantelView==='undefined') appData.plantelView='cards';
+  const view=appData.plantelView;
   let html='<style>'
     +'.lct-pill{cursor:pointer;font-size:11px;padding:5px 11px;border-radius:7px;border:1px solid var(--border2);color:var(--muted);display:inline-block;}'
     +'.lct-pill.on{background:rgba(230,173,62,.16);border-color:var(--accent);color:#f0c563;}'
@@ -1229,26 +1247,62 @@ function renderTierList(){
     +'.lctr{cursor:pointer;}.lctr:hover td{background:var(--surface2);}'
     +'.lct-av{width:40px;height:40px;border-radius:9px;overflow:hidden;flex-shrink:0;}'
     +'.lct-tier{font-size:11px;font-weight:700;padding:2px 8px;border-radius:6px;color:#14110b;}'
+    +'.pv-toggle{display:flex;gap:3px;background:rgba(230,173,62,.08);border:1px solid var(--border2);border-radius:8px;padding:3px;}'
+    +'.pv-toggle span{font-size:11px;padding:4px 12px;border-radius:6px;cursor:pointer;color:var(--muted);}'
+    +'.pv-toggle span.on{background:var(--accent);color:#14110b;font-weight:700;}'
+    +'.pv-tierhdr{display:flex;align-items:center;gap:8px;margin:16px 0 9px;}'
+    +'.pv-tierhdr .tb{font-weight:700;font-size:12px;padding:2px 9px;border-radius:6px;color:#14110b;}'
+    +'.pv-tierhdr .ln{flex:1;height:1px;background:rgba(230,173,62,.18);}'
+    +'.pv-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:11px;}'
+    +'.pv-card{background:#1c1812;border:1px solid var(--border);border-radius:12px;overflow:hidden;cursor:pointer;transition:border-color .12s,transform .12s;}'
+    +'.pv-card:hover{border-color:var(--accent);transform:translateY(-2px);}'
+    +'.pv-card .pv-port{position:relative;height:90px;background:#241f16;display:flex;align-items:center;justify-content:center;overflow:hidden;}'
+    +'.pv-card .pv-port img{width:100%;height:100%;object-fit:cover;}'
+    +'.pv-card .pv-tb{position:absolute;top:6px;right:6px;width:20px;height:20px;border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#14110b;}'
+    +'.pv-card .pv-flag{position:absolute;bottom:5px;left:6px;background:rgba(20,17,11,.82);color:#d8a23e;font-size:9px;padding:1px 5px;border-radius:4px;}'
+    +'.pv-card .pv-body{padding:8px 10px;}'
+    +'.pv-card .pv-nm{font-size:13px;color:#f0e9d6;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}'
+    +'.pv-card .pv-wr{font-size:15px;font-weight:700;margin-top:3px;}'
+    +'.pv-card .pv-sel{font-size:11px;color:var(--muted);margin-top:1px;}'
     +'</style>';
-  html+='<div class="home-hdr"><h2>Plantel · Parche '+appData.patch+'</h2>'
+  var _wk2=appData.windowKey||'t24';
+  var _titlePrefix=(String(_wk2).charAt(0)==='t')?L('Ventana','Window'):L('Parche','Patch');
+  html+='<div class="home-hdr"><h2>Plantel · '+_titlePrefix+' '+appData.patch+'</h2>'
     +'<p>Win rate del parche actual · ▲▼ = cambio vs el parche anterior · clic en un héroe para su build</p></div>';
+  html+='<p style="font-size:11px;color:var(--hint);margin:-4px 0 12px;line-height:1.55;max-width:760px">'
+    +L('ℹ️ Las tiers usan suavizado bayesiano: el win rate se ajusta según el número de partidas, para no sobrevalorar a héroes con muestra pequeña. Cuantas menos partidas, más se acerca el valor a 50%.',
+        'ℹ️ Tiers use Bayesian shrinkage: win rate is adjusted by the number of games, so heroes with a small sample aren\'t overrated. The fewer the games, the closer the value sits to 50%.')
+    +'</p>';
   html+='<div style="display:flex;align-items:center;gap:13px;margin-bottom:12px;flex-wrap:wrap">'
     +'<span style="font-size:12px;color:#cdbf9d">'+(totalSampleGames()>0?fmtCount(totalSampleGames())+' partidas analizadas':'Sin datos — presiona Actualizar')+'</span>'
     +(lu?'<span style="font-size:11px;color:var(--green)">En vivo · '+lu+'</span>':'<span style="font-size:11px;color:var(--amber)">Presiona Actualizar para datos en vivo</span>')
     +'<button class="upd-btn" onclick="exportTierImage()" style="margin-left:auto">🖼️ '+L('Exportar imagen','Export image')+'</button>'
+    +'<div class="pv-toggle">'
+      +'<span class="'+(view==='table'?'on':'')+'" onclick="setPlantelView(\'table\')">'+L('Tabla','Table')+'</span>'
+      +'<span class="'+(view==='cards'?'on':'')+'" onclick="setPlantelView(\'cards\')">Cards</span>'
+    +'</div>'
     +'</div>';
+  var _wk=appData.windowKey||'t24';
+  var _samp=totalSampleGames();
+  var _shortWindow=(_wk==='t24'||_wk==='t7d');
+  var _patchYoung=false;
   if(appData.patchAnchor && appData.patchAnchor.ts){
     var _ageH=(Date.now()/1000 - appData.patchAnchor.ts)/3600;
-    if(_ageH < 36 || totalSampleGames() < 50000){
-      html+='<div style="font-size:11px;color:var(--amber);background:rgba(230,173,62,.08);border:1px solid var(--border2);border-radius:7px;padding:8px 11px;margin-bottom:12px">⏳ '+L('Datos aún asentándose — el parche es reciente y los porcentajes pueden moverse.','Data still settling — the patch is recent and percentages may shift.')+'</div>';
-    }
+    _patchYoung=(_ageH < 36);
   }
+  if(_shortWindow || _patchYoung || (_samp>0 && _samp < 50000)){
+    var _wmsg = _shortWindow
+      ? L('Ventana corta — muestra pequeña, los porcentajes pueden variar bastante.','Short window — small sample, percentages can vary a lot.')
+      : L('Datos aún asentándose — el parche es reciente y los porcentajes pueden moverse.','Data still settling — the patch is recent and percentages may shift.');
+    html+='<div style="font-size:11px;color:var(--amber);background:rgba(230,173,62,.08);border:1px solid var(--border2);border-radius:7px;padding:8px 11px;margin-bottom:12px">⏳ '+_wmsg+'</div>';
+  }
+  if(view==='table'){
   html+='<table class="lct"><thead><tr>'
     +'<th style="width:30px">#</th><th>Héroe</th><th style="width:38%">Win rate <span style="color:var(--hint);text-transform:none;letter-spacing:0">· vs parche ant.</span></th>'
     +'<th style="width:62px">Sel.</th><th style="width:74px">Partidas</th>'
     +'<th style="width:54px;text-align:center">Tier</th></tr></thead><tbody>';
   if(!heroes.length){
-    html+='<tr><td colspan="6" style="text-align:center;color:var(--hint);padding:26px">— Sin datos todavía. Presiona "Actualizar Todo". —</td></tr>';
+    html+='<tr><td colspan="6" style="text-align:center;color:var(--hint);padding:26px">— '+L('Sin datos todavía. Presiona "Actualizar Todo".','No data yet. Press "Actualizar Todo".')+' —</td></tr>';
   }
   heroes.forEach(function(h,i){
     var init=h.name.split(' ').map(function(w){return w[0];}).join('').slice(0,2).toUpperCase();
@@ -1266,6 +1320,40 @@ function renderTierList(){
       +'</tr>';
   });
   html+='</tbody></table>';
+  } else {
+    if(!heroes.length){
+      html+='<div style="text-align:center;color:var(--hint);padding:34px">— '+L('Sin datos todavía. Presiona "Actualizar Todo".','No data yet. Press "Actualizar Todo".')+' —</div>';
+    } else {
+      var tiersOrder=['S+','S','A','B','C','D'];
+      var byTier={'S+':[],S:[],A:[],B:[],C:[],D:[]};
+      heroes.forEach(function(h){ var t=(h.tier&&byTier[h.tier])?h.tier:'D'; byTier[t].push(h); });
+      tiersOrder.forEach(function(tier){
+        var grp=byTier[tier]; if(!grp.length) return;
+        var tb=tCol[tier]||'#a89878';
+        html+='<div class="pv-tierhdr"><span class="tb" style="background:'+tb+'">'+tier+'</span>'
+          +'<span style="font-size:12px;color:'+tb+'">'+L('Tier','Tier')+' · '+grp.length+' '+L('héroes','heroes')+'</span>'
+          +'<span class="ln"></span></div>';
+        html+='<div class="pv-grid">';
+        grp.forEach(function(h){
+          var init=h.name.split(' ').map(function(w){return w[0];}).join('').slice(0,2).toUpperCase();
+          var p=h.wr?h.wr*100:0;
+          var c=h.wr?wrCol(p):'var(--muted)';
+          html+='<div class="pv-card" onclick="tlPick(\''+h.id+'\')">'
+            +'<div class="pv-port">'+hImg(h.id,init,false)
+              +'<span class="pv-tb" style="background:'+tb+'">'+(h.tier||'—')+'</span>'
+              +(lowSample(h.matches)?'<span class="pv-flag" title="'+L('Muestra pequeña — tier ajustado hacia 50%','Small sample — tier adjusted toward 50%')+'">'+L('muestra baja','low sample')+'</span>':'')
+            +'</div>'
+            +'<div class="pv-body">'
+              +'<div class="pv-nm">'+h.name+'</div>'
+              +'<div class="pv-wr" style="color:'+c+'">'+(h.wr?p.toFixed(1)+'%':'—')+' <span style="font-size:10px;color:var(--muted);font-weight:400">WR</span></div>'
+              +'<div class="pv-sel">'+L('Sel.','Pick')+' '+(h.pick?(h.pick*100).toFixed(1)+'%':'—')+'</div>'
+            +'</div>'
+          +'</div>';
+        });
+        html+='</div>';
+      });
+    }
+  }
   html+='<div style="font-size:10px;color:var(--hint);margin-top:12px;padding-top:9px;border-top:1px solid var(--border);display:flex;justify-content:space-between;flex-wrap:wrap;gap:6px">'
     +'<span>Datos: deadlock-api.com · desde el parche '+(appData.patch||'?')+' · Rango: '+getRankLabel()+'</span>'
     +'<span>Hecho en Puerto Rico 🇵🇷 · LaCitadel · por Chanlaser</span>'
@@ -1274,6 +1362,12 @@ function renderTierList(){
 }
 
 function tlPick(id){ setNav('roster'); pick(id); }
+
+function setPlantelView(v){
+  appData.plantelView = v;
+  try{ if(typeof saveApp==='function') saveApp(); }catch(e){}
+  renderTierList();
+}
 
 // ── HERO HEADER ───────────────────────────────────────────────────────────────
 function heroHdr(h){
@@ -1465,7 +1559,7 @@ function itemsTab(h,hd){
     +'<th style="width:22%" data-col="picks">'+t('pickRateCol')+'</th><th style="width:22%" data-col="wr">'+t('winRateCol')+'</th>'
     +'<th style="width:13%" data-col="wp" title="Pick × WR">'+('Puntaje ↕')+'</th>'
     +'</tr></thead><tbody id="tb"></tbody></table>'
-    +'<div class="src" id="itSrc">Source: metabot.gg (deadlock-api.com) · Updated: '+(appData.updatedAt||'—')+'</div>';
+    +'<div class="src" id="itSrc">Source: deadlock-api.com · Updated: '+(appData.updatedAt||'—')+'</div>';
 }
 
 function attachItemEvents(hd){
@@ -1677,15 +1771,38 @@ function bbcodeToHtml(s){
 function populatePatchSel(){
   var sel=document.getElementById('patchSel'); if(!sel) return;
   var list=appData.patchList||[];
-  if(!list.length){ sel.innerHTML='<option value="0">'+L('Último parche','Latest patch')+'</option>'; return; }
-  var cur=appData.patchSelIdx||0;
-  sel.innerHTML=list.map(function(p,i){
-    var tag=/gameplay/i.test(p.label||'')?(' \u00b7 '+L('Mayor','Major')):(/minor/i.test(p.label||'')?' \u00b7 Minor':'');
-    return '<option value="'+i+'" '+(i===cur?'selected':'')+'>'+(p.date||('#'+i))+tag+'</option>';
-  }).join('');
+  var curKey=appData.windowKey||'t24';
+  var opt=function(val,label,selected){ return '<option value="'+val+'" '+(selected?'selected':'')+'>'+label+'</option>'; };
+  var html='';
+  // Time windows first (default = last 24h)
+  html+=opt('t24', L('Últimas 24 horas','Last 24 hours'), curKey==='t24');
+  html+=opt('t7d', L('7 días','7 days'),                   curKey==='t7d');
+  html+=opt('t30d',L('1 mes','1 month'),                   curKey==='t30d');
+  // Then the patches, newest-first by date (Major/Minor tag is informational only)
+  if(list.length){
+    html+='<option disabled>──────────</option>';
+    html+=list.map(function(p,i){
+      var tag=/gameplay/i.test(p.label||'')?(' \u00b7 '+L('Mayor','Major')):(/minor/i.test(p.label||'')?' \u00b7 Minor':'');
+      return opt('p'+i, (p.date||('#'+i))+tag, curKey==='p'+i);
+    }).join('');
+  }
+  sel.innerHTML=html;
 }
-function selectPatch(idx){
-  idx=parseInt(idx,10)||0;
+function selectWindow(val){
+  val=String(val||'t24');
+  appData.windowKey=val;
+  try{ if(typeof saveApp==='function') saveApp(); }catch(e){}
+  var nowS=Math.floor(Date.now()/1000);
+  if(val.charAt(0)==='t'){
+    // rolling time window: minTs = now - span, no capped previous window (trend shows —)
+    var span = val==='t24'?86400 : (val==='t7d'?7*86400 : 30*86400);
+    var anchorTs=nowS-span;
+    var label = val==='t24'?L('Últimas 24 horas','Last 24 hours') : (val==='t7d'?L('7 días','7 days') : L('1 mes','1 month'));
+    loadRanksForWindow(anchorTs, 0, 0, 0, label);
+    return;
+  }
+  // patch key: 'p<idx>'
+  var idx=parseInt(val.slice(1),10)||0;
   var list=appData.patchList||[];
   if(!list.length||!list[idx]) return;
   appData.patchSelIdx=idx;
@@ -1705,7 +1822,7 @@ async function loadRanksForWindow(anchorTs, capTs, prevTs, prevCapTs, dateLabel)
       var cur=await window.api.fetchHeroStats(rk.badge, anchorTs, capTs, i>0);
       var pv={};
       if(prevTs>0){ try{ var pr=await window.api.fetchHeroStats(rk.badge, prevTs, prevCapTs, true); if(pr&&pr.ok&&pr.data) pr.data.forEach(function(h){ pv[h.id]=h.wr; }); }catch(e){} }
-      if(cur&&cur.ok&&cur.data&&cur.data.length>=10){
+      if(cur&&cur.ok&&cur.data&&cur.data.length>=3){
         var mp={};
         cur.data.forEach(function(h){ var wp=pv[h.id]; var o={wr:h.wr,pick:h.pick||0,matches:h.matches||0,wrPrev:(wp!=null?wp:null),delta:(wp!=null?(h.wr-wp):null)}; mp[h.id]=o; mp[(h.name||'').toLowerCase()]=o; });
         newRanks[rk.id]=mp;
@@ -1716,7 +1833,7 @@ async function loadRanksForWindow(anchorTs, capTs, prevTs, prevCapTs, dateLabel)
     if(dateLabel){ appData.patch=dateLabel; }
     appData.patchAnchor={ts:anchorTs, prevTs:prevTs, label:(dateLabel||''), date:(dateLabel||'')};
     applyRankFromCache(getRank());   // pass current rank — without it the lookup was ranksData[undefined] and silently no-op'd, so old-patch data never repainted
-    saveData();
+    if(typeof saveApp==='function') saveApp();
   }catch(e){}
   if(sel) sel.disabled=false;
   renderMain();
@@ -1786,6 +1903,7 @@ async function runUpdate(silent=false){
     appData.patch = patch;
     const incMap = {};
     incoming.forEach(h=>{ incMap[h.id]=h; incMap[h.name.toLowerCase()]=h; });
+    TIER_SHRINK_K=computeShrinkK(incoming);
 
     // Update existing heroes
     appData.heroes.forEach(h=>{
@@ -1999,6 +2117,15 @@ async function runUpdate(silent=false){
   document.getElementById('updClose').classList.add('show');
   btn.classList.remove('loading');
   btn.innerHTML = t('updateBtn');
+
+  // Default view is a rolling time window (Last 24h unless the user picked another).
+  // Must actually FETCH that window — otherwise the roster shows patch-anchored data
+  // with a 24h label (wrong counts). Fire it regardless of silent.
+  if(typeof appData.windowKey==='undefined') appData.windowKey='t24';
+  if(typeof populatePatchSel==='function') populatePatchSel();
+  if(String(appData.windowKey).charAt(0)==='t' && typeof selectWindow==='function'){
+    selectWindow(appData.windowKey);
+  }
 }
 
 // ── RANK SELECTOR ────────────────────────────────────────────────────────────
@@ -2052,6 +2179,9 @@ function updateRankBadge(){
 function applyRankFromCache(rankId){
   const cache=(appData.ranksData||{})[rankId];
   if(!cache) return false;
+  // adaptive shrinkage: K from this window's median sample
+  var _mlist=[]; appData.heroes.forEach(h=>{ var m=cache[h.id]||cache[(h.name||'').toLowerCase()]; if(m&&m.matches) _mlist.push({matches:m.matches}); });
+  TIER_SHRINK_K=computeShrinkK(_mlist);
   appData.heroes.forEach(h=>{
     const m=cache[h.id]||cache[(h.name||'').toLowerCase()];
     if(m){ h.wr=m.wr; h.pick=m.pick; if(m.matches!=null)h.matches=m.matches; h.tier=toTier(m.wr, m.matches); h.wrPrev=(m.wrPrev!=null?m.wrPrev:null); h.delta=(m.delta!=null?m.delta:null); }
@@ -2962,6 +3092,7 @@ if(IS_ELECTRON){
     if(prog) prog.style.display = 'none';
     if(msg){ msg.style.display='block'; msg.textContent = L('Descarga completa. Reinicia para instalar.','Download complete. Restart to install.'); }
     if(btn){
+      btn.disabled = false;
       btn.textContent = L('↻ Reiniciar ahora','↻ Restart now');
       btn.style.background = 'var(--green)';
     }
@@ -2970,8 +3101,10 @@ if(IS_ELECTRON){
   window.api.onAppUpdateError((msg) => {
     const t = document.getElementById('appUpdateTitle');
     const m = document.getElementById('appUpdateMsg');
+    const b = document.getElementById('appUpdateBtn');
     if(t) t.textContent = L('Error de actualización','Update error');
     if(m){ m.style.display='block'; m.style.color='var(--red)'; m.textContent = msg; }
+    if(b){ b.disabled = false; b.textContent = L('Reintentar','Retry'); }
   });
 
   window.handleUpdateClick = function(){

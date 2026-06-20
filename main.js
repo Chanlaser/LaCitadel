@@ -102,7 +102,8 @@ app.whenReady().then(() => {
   });
   createWindow();
 });
-app.on('window-all-closed',()=>{ if(process.platform!=='darwin') app.quit(); });
+let isUpdating = false; // true while an update install is in progress, so window-all-closed doesn't pre-empt quitAndInstall
+app.on('window-all-closed',()=>{ if(process.platform!=='darwin' && !isUpdating) app.quit(); });
 app.on('activate',()=>{ if(!mainWindow) createWindow(); });
 app.on('quit',()=>{ if(updateTimer) clearTimeout(updateTimer); });
 
@@ -523,10 +524,10 @@ async function fetchPatchNotes(){
 }
 
 // ── IPC HANDLERS ──────────────────────────────────────────────────────────
-ipcMain.handle('fetch-hero-stats', async(_, badge) => {
+ipcMain.handle('fetch-hero-stats', async(_, badge, minTs, maxTs, reuseAssets) => {
   try {
-    const data = await fetchHeroStats(badge||0);
-    console.log('[hero-stats] Success:', data.length, 'heroes');
+    const data = await fetchHeroStats(badge||0, minTs||0, maxTs||0, !!reuseAssets);
+    console.log('[hero-stats] Success:', data.length, 'heroes  (minTs:'+(minTs||0)+' maxTs:'+(maxTs||0)+')');
     return { ok:true, data };
   } catch(e) {
     console.error('[hero-stats] ERROR:', e.message||e.code||String(e));
@@ -579,7 +580,18 @@ try {
 
 ipcMain.handle('check-for-update', async() => { if(!autoUpdater) return {ok:false,error:'updater not available'}; try{ await autoUpdater.checkForUpdates(); return {ok:true}; }catch(e){ updLog('manual check error: '+e.message); return {ok:false,error:e.message}; } });
 ipcMain.handle('download-update',  async() => { if(!autoUpdater) return {ok:false}; try{ await autoUpdater.downloadUpdate(); return {ok:true}; }catch(e){ updLog('download error: '+e.message); return {ok:false,error:e.message}; } });
-ipcMain.on('install-update', () => { if(autoUpdater) autoUpdater.quitAndInstall(); });
+ipcMain.on('install-update', () => {
+  if(!autoUpdater){ updLog('install-update ignored — autoUpdater is null'); return; }
+  isUpdating = true;
+  updLog('install-update requested — calling quitAndInstall(false, true)');
+  setImmediate(() => {
+    try { autoUpdater.quitAndInstall(false, true); }
+    catch(e){ isUpdating = false; updLog('quitAndInstall threw: ' + (e && (e.stack||e.message||e))); }
+  });
+  // Safety net: if the install didn't take the app down (e.g. nothing to install),
+  // re-enable normal quit so the window's X button still works.
+  setTimeout(() => { isUpdating = false; }, 8000);
+});
 
 app.whenReady().then(() => {
   setTimeout(() => {
