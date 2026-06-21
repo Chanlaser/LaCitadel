@@ -2759,9 +2759,9 @@ var pollSel = {};
 
 async function sbInsertVotes(p, per, ids){
   var rows=ids.map(function(h){ return {poll_id:p, hero_id:h, device_id:deviceId(), periodo:per}; });
-  var res=await fetch(SB_URL+'/rest/v1/votos?on_conflict=poll_id,hero_id,device_id,periodo', {
+  var res=await fetch(SB_URL+'/rest/v1/votos', {
     method:'POST',
-    headers:{ 'apikey':SB_KEY, 'Authorization':'Bearer '+SB_KEY, 'Content-Type':'application/json', 'Prefer':'resolution=ignore-duplicates,return=minimal' },
+    headers:{ 'apikey':SB_KEY, 'Content-Type':'application/json', 'Prefer':'return=minimal' },
     body:JSON.stringify(rows)
   });
   if(!res.ok && res.status!==409) throw new Error('HTTP '+res.status);
@@ -2769,7 +2769,7 @@ async function sbInsertVotes(p, per, ids){
 }
 async function sbResults(p, per){
   var url=SB_URL+'/rest/v1/resultados?select=hero_id,votos&poll_id=eq.'+encodeURIComponent(p)+'&periodo=eq.'+encodeURIComponent(per);
-  var res=await fetch(url, { headers:{ 'apikey':SB_KEY, 'Authorization':'Bearer '+SB_KEY } });
+  var res=await fetch(url, { headers:{ 'apikey':SB_KEY } });
   if(!res.ok) throw new Error('HTTP '+res.status);
   return await res.json();
 }
