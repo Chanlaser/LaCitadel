@@ -1738,6 +1738,7 @@ if(IS_ELECTRON){
   window.api.getAppVersion().then(v=>{
     const el=document.getElementById('appVersion');
     if(el) el.textContent='v'+v;
+    sendPing(v); // anonymous launch analytics (fire-and-forget)
   });
 }
 
@@ -2741,6 +2742,29 @@ function deviceId(){
     if(!d){ d=(window.crypto&&crypto.randomUUID)?crypto.randomUUID():('dev-'+Date.now()+'-'+Math.random().toString(36).slice(2)); localStorage.setItem('lc_device_id',d); }
     return d; }catch(e){ return 'dev-fallback'; }
 }
+
+// ── ANALYTICS PING ───────────────────────────────────────────────────────────
+// Fire-and-forget anonymous launch ping to the Edge Function. Never blocks or
+// alerts the user; fails silently. Country is derived server-side (IP not stored).
+function sendPing(appVersion){
+  try{
+    var isDev = false;
+    try{ isDev = (appVersion==null) || (typeof appVersion==='string' && appVersion.indexOf('dev')>=0); }catch(e){}
+    var payload = {
+      device_id: deviceId(),
+      app_version: appVersion || 'dev',
+      os: (navigator && navigator.platform) ? String(navigator.platform).slice(0,60) : null,
+      locale: (navigator && navigator.language) ? String(navigator.language).slice(0,30) : null,
+      is_dev: isDev
+    };
+    fetch(SB_URL+'/functions/v1/ping', {
+      method:'POST',
+      headers:{ 'Content-Type':'application/json' },
+      body: JSON.stringify(payload)
+    }).catch(function(){ /* silent */ });
+  }catch(e){ /* silent */ }
+}
+
 function isoWeek(dt){
   var d=new Date(Date.UTC(dt.getFullYear(),dt.getMonth(),dt.getDate()));
   var day=d.getUTCDay()||7; d.setUTCDate(d.getUTCDate()+4-day);

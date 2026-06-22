@@ -1,6 +1,6 @@
 {
   "name": "lacitadel",
-  "version": "1.0.10",
+  "version": "1.0.11",
   "description": "Deadlock community stats dashboard \u2014 open project, free forever",
   "main": "main.js",
   "homepage": "./",
