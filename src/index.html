@@ -1738,7 +1738,13 @@ if(IS_ELECTRON){
   window.api.getAppVersion().then(v=>{
     const el=document.getElementById('appVersion');
     if(el) el.textContent='v'+v;
-    sendPing(v); // anonymous launch analytics (fire-and-forget)
+    if(window.api.getIsPackaged){
+      window.api.getIsPackaged()
+        .then(packaged=> sendPing(v, packaged)) // installed build → is_dev=false
+        .catch(()=> sendPing(v));               // bridge failed → version-string fallback
+    } else {
+      sendPing(v); // older preload without the bridge → version-string fallback
+    }
   });
 }
 
@@ -2746,10 +2752,15 @@ function deviceId(){
 // ── ANALYTICS PING ───────────────────────────────────────────────────────────
 // Fire-and-forget anonymous launch ping to the Edge Function. Never blocks or
 // alerts the user; fails silently. Country is derived server-side (IP not stored).
-function sendPing(appVersion){
+function sendPing(appVersion, isPackaged){
   try{
-    var isDev = false;
-    try{ isDev = (appVersion==null) || (typeof appVersion==='string' && appVersion.indexOf('dev')>=0); }catch(e){}
+    var isDev;
+    if(typeof isPackaged === 'boolean'){
+      isDev = !isPackaged; // authoritative: installed build → false, `npm start` → true
+    } else {
+      isDev = false;
+      try{ isDev = (appVersion==null) || (typeof appVersion==='string' && appVersion.indexOf('dev')>=0); }catch(e){}
+    }
     var payload = {
       device_id: deviceId(),
       app_version: appVersion || 'dev',
@@ -2930,7 +2941,7 @@ async function lcLoadImg(src, cross){
     im.src=src;
   });
 }
-async function exportTierImage(){
+async function lcExportFull(){
   var heroes=(appData.heroes||[]).slice().sort(function(a,b){return (b.wr||0)-(a.wr||0);});
   if(!heroes.length){ alert(L('Primero presiona "Actualizar Todo" para cargar datos.','Press "Actualizar Todo" first to load data.')); return; }
   var btn=document.querySelector('button[onclick="exportTierImage()"]');
@@ -3029,6 +3040,189 @@ async function exportTierImage(){
     if(btn){ btn.disabled=false; btn.textContent=btnTxt; }
     alert(L('Error al exportar: ','Export error: ')+(e.message||e));
   }
+}
+
+// ── SOCIAL SLIDE RENDERER (scales to any canvas size / row count) ──────────
+// Draws one slide of the tier list. Fonts & spacing derive from row height,
+// so 19 rows in a 1080x1440 frame come out ~2x bigger than the full 38-row 4K.
+function lcRenderTierSlide(o){
+  var FONT="'Segoe UI', Arial, sans-serif";
+  var W=o.W, H=o.H, M=Math.round(W*0.035), inset=Math.round(W*0.01);
+  var cv=document.createElement('canvas'); cv.width=W; cv.height=H;
+  var x=cv.getContext('2d');
+  x.fillStyle='#14110b'; x.fillRect(0,0,W,H);
+  x.textBaseline='alphabetic';
+
+  // banner band (cover-fit, vertically centred)
+  var bandH = o.banner ? Math.min(Math.round(W*600/3200), Math.round(H*0.20)) : 0;
+  if(o.banner){
+    var bw=o.banner.naturalWidth||o.banner.width, bh=o.banner.naturalHeight||o.banner.height;
+    var bsc=Math.max(W/bw, bandH/bh), bdw=bw*bsc, bdh=bh*bsc;
+    x.save(); x.beginPath(); x.rect(0,0,W,bandH); x.clip();
+    x.drawImage(o.banner,(W-bdw)/2,(bandH-bdh)/2,bdw,bdh); x.restore();
+    x.fillStyle='#e6ad3e'; x.fillRect(0,bandH,W,Math.max(4,Math.round(W*0.006)));
+  }
+
+  // title row
+  var titleF=Math.round(W*0.052);
+  var ty=bandH + Math.round(H*0.045) + titleF;
+  x.textAlign='left';
+  x.fillStyle='#e6ad3e'; x.font='700 '+titleF+'px '+FONT; x.fillText('LaCitadel', M, ty);
+  var tw=x.measureText('LaCitadel').width;
+  var subF=Math.round(titleF*0.46);
+  x.fillStyle='#a89878'; x.font='600 '+subF+'px '+FONT; x.fillText('\u00b7 TIER LIST', M+tw+Math.round(W*0.012), ty);
+  x.textAlign='right'; x.fillStyle='#f0c563'; x.font='700 '+Math.round(titleF*0.60)+'px '+FONT;
+  x.fillText(o.title+(o.slideLabel?('  '+o.slideLabel):''), W-M, ty); x.textAlign='left';
+  var metaF=Math.round(W*0.022);
+  x.fillStyle='#cdbf9d'; x.font='400 '+metaF+'px '+FONT; x.fillText(o.sub||'', M, ty+Math.round(metaF*1.7));
+  var divY=ty+Math.round(metaF*2.7);
+  x.strokeStyle='rgba(230,173,62,.25)'; x.lineWidth=Math.max(2,Math.round(W*0.0025));
+  x.beginPath(); x.moveTo(M,divY); x.lineTo(W-M,divY); x.stroke();
+
+  // column geometry (numerics right-aligned so they never collide)
+  var rankR=Math.round(W*0.052), avX=Math.round(W*0.070);
+  var barX=Math.round(W*0.400), barW=Math.round(W*0.205);
+  var wrR=Math.round(W*0.670), selR=Math.round(W*0.778), partR=Math.round(W*0.876);
+  var tierCx=Math.round(W*0.930), tierBW=Math.round(W*0.060);
+
+  var colF=Math.round(W*0.020);
+  var colY=divY+Math.round(colF*2.4);
+  var footerH=Math.round(H*0.058);
+  var rowsTop=colY+Math.round(colF*1.4);
+  var rowsArea=H-rowsTop-footerH;
+  var n=o.list.length, rowH=rowsArea/n;
+  var avS=Math.min(rowH*0.62, rowH-6);
+  var nameX=avX+avS+Math.round(W*0.014);
+
+  // column headers
+  x.fillStyle='#8a7c5f'; x.font='600 '+colF+'px '+FONT;
+  x.textAlign='right'; x.fillText('#', rankR, colY); x.textAlign='left';
+  x.fillText(o.L('H\u00c9ROE','HERO'), nameX, colY);
+  x.fillText('WIN RATE', barX, colY);
+  x.textAlign='right';
+  x.fillText('SEL.', selR, colY);
+  x.fillText(o.L('PARTIDAS','GAMES'), partR, colY);
+  x.textAlign='center'; x.fillText('TIER', tierCx, colY); x.textAlign='left';
+
+  var tCol={S:'#e6ad3e','S+':'#e6ad3e',A:'#34c19a',B:'#5a96e0',C:'#e2554d',D:'#a89878'};
+  var nameF=Math.round(Math.min(rowH*0.40, W*0.034)),
+      wrF=Math.round(rowH*0.40), statF=Math.round(rowH*0.34),
+      rankF=Math.round(rowH*0.34), tierF=Math.round(rowH*0.36);
+  var nameMax=barX-nameX-Math.round(W*0.01);
+
+  o.list.forEach(function(h,j){
+    var idx=o.startIndex+j, ry=rowsTop+j*rowH, cy=ry+rowH/2;
+    if(j%2===1){ x.fillStyle='rgba(255,255,255,.03)'; x.fillRect(M-inset, ry, W-2*(M-inset), rowH); }
+    x.strokeStyle='rgba(230,173,62,.10)'; x.lineWidth=1; x.beginPath(); x.moveTo(M-inset,ry); x.lineTo(W-(M-inset),ry); x.stroke();
+    x.fillStyle='#8a7c5f'; x.font='600 '+rankF+'px '+FONT; x.textAlign='right'; x.fillText(String(idx+1), rankR, cy+rankF*0.35); x.textAlign='left';
+    // avatar
+    var ax=avX, ay=cy-avS/2, im=o.imgs[idx];
+    x.save(); lcRoundRect(x, ax, ay, avS, avS, Math.round(avS*0.22)); x.clip();
+    if(im){ var iw=im.naturalWidth||im.width, ih=im.naturalHeight||im.height, sc=Math.max(avS/iw,avS/ih); x.drawImage(im, ax+(avS-iw*sc)/2, ay, iw*sc, ih*sc); x.restore(); }
+    else { x.fillStyle=lcHeroColor(h.name); x.fillRect(ax,ay,avS,avS); x.restore();
+      var init=h.name.split(' ').map(function(w){return w[0];}).join('').slice(0,2).toUpperCase();
+      x.fillStyle='#f2e8d4'; x.font='700 '+Math.round(avS*0.42)+'px '+FONT; x.textAlign='center'; x.fillText(init, ax+avS/2, cy+avS*0.15); x.textAlign='left'; }
+    // name (truncate to fit)
+    x.fillStyle='#f2e8d4'; x.font='600 '+nameF+'px '+FONT;
+    var nm=h.name; if(x.measureText(nm).width>nameMax){ while(nm.length>1 && x.measureText(nm+'\u2026').width>nameMax){ nm=nm.slice(0,-1); } nm+='\u2026'; }
+    x.fillText(nm, nameX, cy+nameF*0.35);
+    // bar
+    var p=h.wr?h.wr*100:0;
+    var c=!h.wr?'#a89878':(p>=52?'#4cc66a':(p>=49?'#e6ad3e':'#e2554d'));
+    var wf=h.wr?Math.max(.06,Math.min(1,(p-44)/12)):0;
+    var barHt=Math.max(8,Math.round(rowH*0.20));
+    lcRoundRect(x, barX, cy-barHt/2, barW, barHt, barHt/2); x.fillStyle='rgba(255,255,255,.08)'; x.fill();
+    if(wf>0){ lcRoundRect(x, barX, cy-barHt/2, barW*wf, barHt, barHt/2); x.fillStyle=c; x.fill(); }
+    x.fillStyle=c; x.font='700 '+wrF+'px '+FONT; x.textAlign='right'; x.fillText(h.wr?p.toFixed(1)+'%':'\u2014', wrR, cy+wrF*0.35);
+    x.fillStyle='#cdbf9d'; x.font='500 '+statF+'px '+FONT; x.fillText(h.pick?(h.pick*100).toFixed(1)+'%':'\u2014', selR, cy+statF*0.35);
+    x.fillStyle='#a89878'; x.fillText(h.matches?fmtCount(h.matches):'\u2014', partR, cy+statF*0.35);
+    x.textAlign='left';
+    var tb=tCol[h.tier]||'#a89878', bh3=Math.round(rowH*0.56);
+    lcRoundRect(x, tierCx-tierBW/2, cy-bh3/2, tierBW, bh3, Math.round(bh3*0.26)); x.fillStyle=tb; x.fill();
+    x.fillStyle='#14110b'; x.font='800 '+tierF+'px '+FONT; x.textAlign='center'; x.fillText(h.tier||'\u2014', tierCx, cy+tierF*0.34); x.textAlign='left';
+  });
+
+  // footer
+  var fy=H-Math.round(footerH*0.40);
+  x.strokeStyle='rgba(230,173,62,.2)'; x.lineWidth=2; x.beginPath(); x.moveTo(M,fy-footerH*0.55); x.lineTo(W-M,fy-footerH*0.55); x.stroke();
+  var footF=Math.round(W*0.018);
+  x.fillStyle='#8a7c5f'; x.font='400 '+footF+'px '+FONT; x.textAlign='left'; x.fillText('Datos: deadlock-api.com', M, fy);
+  x.fillStyle='#a89878'; x.font='600 '+footF+'px '+FONT; x.textAlign='right'; x.fillText('Hecho en Puerto Rico \u00b7 LaCitadel \u00b7 por Chanlaser', W-M, fy); x.textAlign='left';
+  return cv;
+}
+
+function lcDownloadCanvas(cv,name){
+  return new Promise(function(res){
+    cv.toBlob(function(b){
+      if(!b){ res(); return; }
+      var a=document.createElement('a'); a.href=URL.createObjectURL(b); a.download=name;
+      document.body.appendChild(a); a.click();
+      setTimeout(function(){ URL.revokeObjectURL(a.href); a.remove(); res(); }, 900);
+    }, 'image/png');
+  });
+}
+
+// Builds the per-platform jobs, then renders + downloads each slide in sequence.
+async function lcGenerate(format){
+  lcCloseExportMenu();
+  var heroes=(appData.heroes||[]).slice().sort(function(a,b){return (b.wr||0)-(a.wr||0);});
+  if(!heroes.length){ alert(L('Primero presiona "Actualizar Todo" para cargar datos.','Press "Actualizar Todo" first to load data.')); return; }
+  var btn=document.querySelector('button[onclick="exportTierImage()"]');
+  var btnTxt=btn?btn.textContent:''; if(btn) btn.disabled=true;
+  function prog(t){ if(btn) btn.textContent=t; }
+  try{
+    prog(L('Generando\u2026','Generating\u2026'));
+    var banner=await lcLoadImg('../assets/header-lacitadel-strip.jpg', false);
+    var imgs=await Promise.all(heroes.map(function(h){ return lcLoadImg(imgP(h.id), true); }));
+    var sub=(totalSampleGames()>0?fmtCount(totalSampleGames())+' '+L('partidas analizadas','games analyzed'):L('Sin datos','No data'))
+      +'   \u00b7   '+L('Parche','Patch')+' '+(appData.patch||'\u2014')+(appData.updatedAt?('   \u00b7   '+appData.updatedAt):'');
+    var base={heroes:heroes, imgs:imgs, banner:banner, sub:sub, L:L, title:getRankLabel()};
+    var fn=getRank(), half=Math.ceil(heroes.length/2), jobs=[];
+    if(format==='igfb'){
+      jobs.push({W:1080,H:1440, list:heroes.slice(0,half), startIndex:0,    slideLabel:'(1/2)', name:'lacitadel-'+fn+'-ig-1.png'});
+      jobs.push({W:1080,H:1440, list:heroes.slice(half),   startIndex:half, slideLabel:'(2/2)', name:'lacitadel-'+fn+'-ig-2.png'});
+    } else if(format==='tiktok'){
+      jobs.push({W:1080,H:1920, list:heroes.slice(0,half), startIndex:0,    slideLabel:'(1/2)', name:'lacitadel-'+fn+'-tiktok-1.png'});
+      jobs.push({W:1080,H:1920, list:heroes.slice(half),   startIndex:half, slideLabel:'(2/2)', name:'lacitadel-'+fn+'-tiktok-2.png'});
+    } else if(format==='x'){
+      jobs.push({W:1080,H:1080, list:heroes.slice(0,10),   startIndex:0,    slideLabel:'\u00b7 Top 10', name:'lacitadel-'+fn+'-x-top10.png'});
+    }
+    for(var k=0;k<jobs.length;k++){
+      prog(L('Generando ','Generating ')+(k+1)+'/'+jobs.length+'\u2026');
+      var cv=lcRenderTierSlide(Object.assign({}, base, jobs[k]));
+      await lcDownloadCanvas(cv, jobs[k].name);
+    }
+    prog('\u2713 '+L('Listo','Done'));
+    setTimeout(function(){ if(btn){ btn.disabled=false; btn.textContent=btnTxt||('\uD83D\uDDBC\uFE0F '+L('Exportar imagen','Export image')); } }, 1600);
+  }catch(e){
+    if(btn){ btn.disabled=false; btn.textContent=btnTxt; }
+    alert(L('Error al exportar: ','Export error: ')+(e.message||e));
+  }
+}
+
+// ── FORMAT PICKER MENU ──────────────────────────────────────────────────────
+function lcCloseExportMenu(){ var m=document.getElementById('lcExportMenu'); if(m) m.remove(); }
+function lcMenuBtn(fmt,title,desc){
+  var call = fmt==='full' ? 'lcCloseExportMenu();lcExportFull();' : "lcGenerate('"+fmt+"')";
+  return '<button onclick="'+call+'" style="display:block;width:100%;text-align:left;background:#262017;border:1px solid rgba(230,173,62,.18);border-radius:10px;padding:13px 15px;margin-bottom:10px;cursor:pointer">'
+    +'<div style="font:700 15px \'Segoe UI\',Arial;color:#f2e8d4">'+title+'</div>'
+    +'<div style="font:400 12px \'Segoe UI\',Arial;color:#a89878;margin-top:2px">'+desc+'</div></button>';
+}
+function exportTierImage(){
+  lcCloseExportMenu();
+  var ov=document.createElement('div'); ov.id='lcExportMenu';
+  ov.style.cssText='position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.72);display:flex;align-items:center;justify-content:center';
+  ov.onclick=function(e){ if(e.target===ov) lcCloseExportMenu(); };
+  ov.innerHTML='<div style="background:#1b1710;border:1px solid rgba(230,173,62,.35);border-radius:16px;padding:26px 26px 18px;max-width:440px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,.6)">'
+    +'<div style="font:700 20px \'Segoe UI\',Arial;color:#e6ad3e;margin-bottom:4px">'+L('Exportar imagen','Export image')+'</div>'
+    +'<div style="font:400 13px \'Segoe UI\',Arial;color:#a89878;margin-bottom:18px">'+L('Elige el formato para la red social','Choose the format for the social network')+'</div>'
+    + lcMenuBtn('igfb','\uD83D\uDCF1  Instagram / Facebook', L('Carrusel 3:4 \u00b7 2 im\u00e1genes','Carousel 3:4 \u00b7 2 images'))
+    + lcMenuBtn('tiktok','\uD83C\uDFB5  TikTok / Reels', L('Vertical 9:16 \u00b7 2 im\u00e1genes','Vertical 9:16 \u00b7 2 images'))
+    + lcMenuBtn('x','\uD83D\uDC26  X (Twitter)', L('Cuadrado \u00b7 Top 10','Square \u00b7 Top 10'))
+    + lcMenuBtn('full','\uD83D\uDDBC\uFE0F  '+L('Imagen completa 4K','Full 4K image'), L('Lista entera \u00b7 1 imagen','Whole list \u00b7 1 image'))
+    +'<button onclick="lcCloseExportMenu()" style="width:100%;margin-top:6px;background:none;border:none;color:#8a7c5f;font:500 13px \'Segoe UI\',Arial;padding:8px;cursor:pointer">'+L('Cancelar','Cancel')+'</button>'
+    +'</div>';
+  document.body.appendChild(ov);
 }
 
 

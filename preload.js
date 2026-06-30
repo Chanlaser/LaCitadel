@@ -11,6 +11,7 @@ contextBridge.exposeInMainWorld('api', {
   fetchHeroSynergies: (heroId, badge) => ipcRenderer.invoke('fetch-hero-synergies', heroId, badge),
   fetchPatchNotes:  ()              => ipcRenderer.invoke('fetch-patch-notes'),
   getAppVersion:    ()              => ipcRenderer.invoke('get-app-version'),
+  getIsPackaged:    ()              => ipcRenderer.invoke('get-is-packaged'),
 
   // App auto-updater
   checkForUpdate:   ()  => ipcRenderer.invoke('check-for-update'),

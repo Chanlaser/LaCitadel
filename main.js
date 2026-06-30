@@ -552,6 +552,7 @@ ipcMain.handle('fetch-hero-counters',  async(_,id,b)=> { try{ return {ok:true,da
 ipcMain.handle('fetch-hero-synergies', async(_,id,b)=> { try{ return {ok:true,data:await fetchHeroSynergies(id,b||0)}; }catch(e){ return {ok:false,error:e.message}; } });
 ipcMain.handle('fetch-patch-notes', async()=>       { try{ return {ok:true,data:await fetchPatchNotes()}; }catch(e){ return {ok:false,error:e.message}; } });
 ipcMain.handle('get-app-version',   async()=>       app.getVersion());
+ipcMain.handle('get-is-packaged',   async()=>       app.isPackaged); // true for installed build, false under `npm start`
 
 // ── AUTO-UPDATE SCHEDULER ─────────────────────────────────────────────────
 function scheduleAutoUpdate(){
